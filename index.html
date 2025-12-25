@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="container" id="loginContainer">
+        <div class="header">
+            <div class="bus-icon">🚌</div>
+            <h1>UCC Shuttle Tracker</h1>
+            <p class="subtitle">Track shuttles in real-time</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="role-selection">
+            <h2 class="role-title">Select Your Role</h2>
+            <div class="roles">
+                <div class="role-card" onclick="selectRole('student')" id="student-card">
+                    <div class="role-icon">🎓</div>
+                    <div class="role-name">Student</div>
+                </div>
+                <div class="role-card" onclick="selectRole('driver')" id="driver-card">
+                    <div class="role-icon">🚗</div>
+                    <div class="role-name">Driver</div>
+                </div>
+                <div class="role-card" onclick="selectRole('admin')" id="admin-card">
+                    <div class="role-icon">⚙️</div>
+                    <div class="role-name">Admin</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="login-form">
+            <h2 class="login-title">Login Details</h2>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-input">
+                    <input type="password" id="password" placeholder="Enter your password">
+                    <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+                </div>
+            </div>
+            <button class="login-btn" onclick="login()">Login</button>
+        </div>
+    </div>
+    
+    <!-- Student Dashboard -->
+    <div class="container dashboard" id="studentDashboard">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        
+        <!-- Student Info Bar -->
+        <div class="info-bar">
+            <div class="student-info">
+                <span class="student-name">👤 Student</span>
+                <span class="student-status" id="studentStatus">📍 Detecting location...</span>
+            </div>
+            <div class="emergency-btn">
+                <button onclick="callEmergency()">🚨 Emergency</button>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="map-section">
+            <h2>🚌 Live Shuttle Tracking</h2>
+            <div id="map" class="map-container"></div>
+        </div>
+
+        <!-- Shuttle Info Panel -->
+        <div class="shuttle-panel">
+            <h3>📍 Nearest Shuttle</h3>
+            <div id="nearestShuttle" class="shuttle-info">
+                <div class="loading-spinner"></div>
+                <p>Finding nearby shuttles...</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="action-btn" onclick="refreshLocation()">🔄 Refresh Location</button>
+            <button class="action-btn" onclick="showAllShuttles()">🚌 All Shuttles</button>
+            <button class="action-btn" onclick="reportIssue()">📋 Report Issue</button>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="ai-assistant">
+            <h3>🤖 AI Assistant</h3>
+            <div class="chat-container">
+                <div id="chatMessages" class="chat-messages">
+                    <div class="ai-message">
+                        <strong>AI:</strong> Hi! I can help you find shuttles, check arrival times, and navigate campus. Ask me anything!
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="Ask me about shuttles..." onkeypress="if(event.key==='Enter') sendMessage()">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Driver Dashboard -->
+    <div class="container dashboard" id="driverDashboard">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        
+        <!-- Driver Info Bar -->
+        <div class="info-bar">
+            <div class="driver-info">
+                <span class="driver-name">🚌 Driver UCC-001</span>
+                <span class="driver-status">🟢 Route: Main Campus Loop</span>
+            </div>
+            <div class="driver-actions">
+                <button onclick="toggleStatus()" id="statusBtn">🟢 Active</button>
+            </div>
+        </div>
+
+        <!-- Driver Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>👥 Passengers</h3>
+                <div class="stat-value">28/40</div>
+                <div class="stat-label">70% Capacity</div>
+            </div>
+            <div class="stat-card">
+                <h3>⏱️ Trips Today</h3>
+                <div class="stat-value">12</div>
+                <div class="stat-label">+3 from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <h3>⭐ Rating</h3>
+                <div class="stat-value">4.8</div>
+                <div class="stat-label">⬆️ Great!</div>
+            </div>
+            <div class="stat-card">
+                <h3>⛽️ Fuel</h3>
+                <div class="stat-value">65%</div>
+                <div class="stat-label">Refill needed soon</div>
+            </div>
+        </div>
+
+        <!-- Driver Controls -->
+        <div class="driver-controls">
+            <h3>🎮 Shuttle Controls</h3>
+            <div class="control-buttons">
+                <button class="control-btn active" onclick="updateDriverStatus('active')">▶️ Start Trip</button>
+                <button class="control-btn" onclick="updateDriverStatus('delayed')">⏸️ Report Delay</button>
+                <button class="control-btn" onclick="updateDriverStatus('break')">☕️ Break Time</button>
+                <button class="control-btn" onclick="updateDriverStatus('offline')">⏹️ End Shift</button>
+            </div>
+        </div>
+
+        <!-- Route Info -->
+        <div class="route-info">
+            <h3>🗺️ Current Route</h3>
+            <div class="route-details">
+                <div class="route-stop">📍 Main Campus <span class="stop-time">Current</span></div>
+                <div class="route-stop">📍 Library <span class="stop-time">+3 min</span></div>
+                <div class="route-stop">📍 Science Block <span class="stop-time">+7 min</span></div>
+                <div class="route-stop">📍 Hostel A <span class="stop-time">+12 min</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Dashboard -->
+    <div class="container dashboard" id="adminDashboard">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        
+        <!-- Admin Stats -->
+        <div class="admin-stats">
+            <h3>📊 Fleet Management</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>🚌 Total Shuttles</h4>
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">2 offline</div>
+                </div>
+                <div class="stat-card">
+                    <h4>👥 Active Drivers</h4>
+                    <div class="stat-value">6</div>
+                    <div class="stat-label">On duty today</div>
+                </div>
+                <div class="stat-card">
+                    <h4>👨 Total Passengers</h4>
+                    <div class="stat-value">247</div>
+                    <div class="stat-label">Currently on shuttles</div>
+                </div>
+                <div class="stat-card">
+                    <h4>⏱️ Avg Wait Time</h4>
+                    <div class="stat-value">6.2</div>
+                    <div class="stat-label">Minutes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Controls -->
+        <div class="admin-controls">
+            <h3>⚙️ System Controls</h3>
+            <div class="control-panels">
+                <div class="control-panel">
+                    <h4>🚌 Shuttle Management</h4>
+                    <button class="admin-btn" onclick="adminAction('addShuttle')">➕ Add Shuttle</button>
+                    <button class="admin-btn" onclick="adminAction('editRoutes')">📝️ Edit Routes</button>
+                    <button class="admin-btn" onclick="adminAction('assignDrivers')">👤️ Assign Drivers</button>
+                    <button class="admin-btn" onclick="adminAction('maintenance')">🔧 Maintenance</button>
+                </div>
+                
+                <div class="control-panel">
+                    <h4>👨 Driver Management</h4>
+                    <button class="admin-btn" onclick="adminAction('addDriver')">👤️ Add Driver</button>
+                    <button class="admin-btn" onclick="adminAction('scheduleShifts')">📅 Schedule Shifts</button>
+                    <button class="admin-btn" onclick="adminAction('performance')">⭐ Performance</button>
+                    <button class="admin-btn" onclick="adminAction('incidents')">⚠️ Incidents</button>
+                </div>
+                
+                <div class="control-panel">
+                    <h4>📈 Analytics</h4>
+                    <button class="admin-btn" onclick="adminAction('reports')">📊 Reports</button>
+                    <button class="admin-btn" onclick="adminAction('usage')">🕐️ Usage Stats</button>
+                    <button class="admin-btn" onclick="adminAction('revenue')">💰 Revenue</button>
+                    <button class="admin-btn" onclick="adminAction('searchLogs')">🔍 Search Logs</button>
+                </div>
+                
+                <div class="control-panel">
+                    <h4>🚨 Alerts</h4>
+                    <div class="alert-item" style="border-left: 3px solid #ffc107; background: #fffbf0;">
+                        <div>⚠️ Shuttle UCC-003 delayed at Library</div>
+                        <small>5 minutes ago</small>
+                    </div>
+                    <div class="alert-item" style="border-left: 3px solid #dc3545; background: #f8d7da;">
+                        <div>🔴 Fuel low on shuttle UCC-005</div>
+                        <small>12 minutes ago</small>
+                    </div>
+                    <div class="alert-item" style="border-left: 3px solid #28a745; background: #d4edda;">
+                        <div>✅ New driver assigned to route</div>
+                        <small>1 hour ago</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
