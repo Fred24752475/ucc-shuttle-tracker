@@ -347,7 +347,7 @@ class UCCMessaging {
             return;
         }
 
-        this.socket = io('http://localhost:3001', {
+        this.socket = io(API_CONFIG.API_URL, {
             auth: {
                 token: this.token
             }
