@@ -19,7 +19,7 @@ class StudentFriendsSystem {
 
     setupSocketListeners() {
         if (typeof io !== 'undefined') {
-            this.socket = io();
+            this.socket = io(API_CONFIG.API_URL);
             const userId = JSON.parse(localStorage.getItem('ucc_user')).id;
             
             // Listen for friend requests
@@ -39,6 +39,20 @@ class StudentFriendsSystem {
     }
 
     setupEventListeners() {
+        // Tab buttons
+        document.querySelectorAll('.chat-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.getAttribute('data-tab');
+                this.showFriendsTab(tab);
+            });
+        });
+
+        // Search input
+        const searchInput = document.getElementById('studentSearch');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', () => this.filterStudents());
+        }
+
         // Send message button
         const sendBtn = document.getElementById('sendMessageBtn');
         if (sendBtn) {
@@ -55,6 +69,41 @@ class StudentFriendsSystem {
                 }
             });
         }
+    }
+
+    showFriendsTab(tab) {
+        // Hide all tabs
+        document.getElementById('friendsTabContent').style.display = 'none';
+        document.getElementById('requestsTabContent').style.display = 'none';
+        document.getElementById('findTabContent').style.display = 'none';
+        document.getElementById('chatContainer').style.display = 'none';
+        
+        // Remove active class
+        document.querySelectorAll('.chat-tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        // Show selected tab
+        if (tab === 'friends') {
+            document.getElementById('friendsTabContent').style.display = 'block';
+            document.querySelector('[data-tab="friends"]').classList.add('active');
+            this.loadFriends();
+        } else if (tab === 'requests') {
+            document.getElementById('requestsTabContent').style.display = 'block';
+            document.querySelector('[data-tab="requests"]').classList.add('active');
+            this.loadFriendRequests();
+        } else if (tab === 'find') {
+            document.getElementById('findTabContent').style.display = 'block';
+            document.querySelector('[data-tab="find"]').classList.add('active');
+            this.loadAllStudents();
+        }
+    }
+
+    filterStudents() {
+        const search = document.getElementById('studentSearch').value.toLowerCase();
+        const cards = document.querySelectorAll('.student-card');
+        cards.forEach(card => {
+            const name = card.querySelector('h4').textContent.toLowerCase();
+            card.style.display = name.includes(search) ? 'flex' : 'none';
+        });
     }
 
     async loadAllStudents() {
@@ -92,11 +141,19 @@ class StudentFriendsSystem {
                     <h4>${student.name}</h4>
                     <p>${student.student_id || 'Student'}</p>
                 </div>
-                <button class="btn-add-friend" onclick="friendsSystem.sendFriendRequest(${student.id})">
+                <button class="btn-add-friend" data-student-id="${student.id}">
                     ➕ Add Friend
                 </button>
             </div>
         `).join('');
+
+        // Add event listeners to all add friend buttons
+        container.querySelectorAll('.btn-add-friend').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const studentId = parseInt(btn.getAttribute('data-student-id'));
+                this.sendFriendRequest(studentId);
+            });
+        });
     }
 
     async sendFriendRequest(receiverId) {
@@ -163,11 +220,27 @@ class StudentFriendsSystem {
                     <small>${new Date(request.created_at).toLocaleDateString()}</small>
                 </div>
                 <div class="request-actions">
-                    <button class="btn-accept" onclick="friendsSystem.acceptRequest(${request.id})">✓ Accept</button>
-                    <button class="btn-reject" onclick="friendsSystem.rejectRequest(${request.id})">✗ Reject</button>
+                    <button class="btn-accept" data-request-id="${request.id}">✓ Accept</button>
+                    <button class="btn-reject" data-request-id="${request.id}">✗ Reject</button>
                 </div>
             </div>
         `).join('');
+
+        // Add event listeners to accept buttons
+        container.querySelectorAll('.btn-accept').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const requestId = parseInt(btn.getAttribute('data-request-id'));
+                this.acceptRequest(requestId);
+            });
+        });
+
+        // Add event listeners to reject buttons
+        container.querySelectorAll('.btn-reject').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const requestId = parseInt(btn.getAttribute('data-request-id'));
+                this.rejectRequest(requestId);
+            });
+        });
     }
 
     updateRequestBadge() {
@@ -248,7 +321,7 @@ class StudentFriendsSystem {
         }
 
         container.innerHTML = this.friends.map(friend => `
-            <div class="friend-card" onclick="friendsSystem.openChat(${friend.friend_id}, '${friend.name}')">
+            <div class="friend-card" data-friend-id="${friend.friend_id}" data-friend-name="${friend.name}">
                 <div class="friend-avatar">
                     <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(friend.name)}&background=667eea&color=fff" alt="${friend.name}">
                     <span class="online-status ${friend.last_login ? 'online' : 'offline'}"></span>
@@ -261,6 +334,15 @@ class StudentFriendsSystem {
                 <div class="chat-icon">💬</div>
             </div>
         `).join('');
+
+        // Add event listeners to friend cards
+        container.querySelectorAll('.friend-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const friendId = parseInt(card.getAttribute('data-friend-id'));
+                const friendName = card.getAttribute('data-friend-name');
+                this.openChat(friendId, friendName);
+            });
+        });
     }
 
     async openChat(friendId, friendName) {
@@ -388,11 +470,8 @@ class StudentFriendsSystem {
     }
 }
 
-// Initialize when DOM is ready
-let friendsSystem;
+// Initialize when DOM is ready and make globally available
+window.friendsSystem = null;
 document.addEventListener('DOMContentLoaded', () => {
-    friendsSystem = new StudentFriendsSystem();
+    window.friendsSystem = new StudentFriendsSystem();
 });
-
-// Make it globally available
-window.friendsSystem = friendsSystem;
