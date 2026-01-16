@@ -26,7 +26,7 @@
         // API Config - Auto-detect correct URL
         const API_CONFIG = {
             API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                ? 'http://localhost:3001' 
+                ? '' 
                 : `http://${window.location.hostname}:3001`
         };
         console.log('🌐 API URL:', API_CONFIG.API_URL);

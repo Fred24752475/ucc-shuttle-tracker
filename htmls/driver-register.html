@@ -590,7 +590,7 @@
                 console.log('🔑 Attempting API driver registration...');
                 console.log('🔍 Form data being sent:', formData);
                 
-                const response = await fetch('http://localhost:3001/api/register', {
+                const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -655,7 +655,7 @@ Redirecting to driver login in 3 seconds...`;
         // Test database connection
         async function testDatabaseConnection() {
             try {
-                const response = await fetch('http://localhost:3001/api/ping');
+                const response = await fetch('/api/ping');
                 const data = await response.json();
 
                 if (data.success) {

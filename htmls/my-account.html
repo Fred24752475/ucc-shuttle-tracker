@@ -400,7 +400,7 @@
         async function loadUserDetails() {
             try {
                 // Try to get user details from API
-                const response = await fetch(`http://localhost:3001/api/user/${currentUser.email}`, {
+                const response = await fetch(`/api/user/${currentUser.email}`, {
                     headers: {
                         'Authorization': `Bearer ${currentUser.token || ''}`
                     }
@@ -592,7 +592,7 @@
                 };
                 
                 // Update via API
-                const response = await fetch(`http://localhost:3001/api/user/${currentUser.email}`, {
+                const response = await fetch(`/api/user/${currentUser.email}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -636,7 +636,7 @@
                 };
                 
                 // Update via API
-                const response = await fetch(`http://localhost:3001/api/user/${currentUser.email}`, {
+                const response = await fetch(`/api/user/${currentUser.email}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
