@@ -1276,8 +1276,36 @@ input:checked + .slider:before {
 }
 
 @media (max-width: 768px) {
+    /* Sidebar Mobile */
+    .sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+        z-index: 1001;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    /* Header Mobile */
     .top-header {
         padding: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--white);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
     }
     
     .welcome-message h1 {
@@ -1290,6 +1318,8 @@ input:checked + .slider:before {
     
     .header-stats {
         gap: 2rem;
+        width: 100%;
+        justify-content: center;
     }
     
     .stat-number {
@@ -1300,8 +1330,14 @@ input:checked + .slider:before {
         font-size: 0.8rem;
     }
     
+    /* Dashboard Main Mobile */
+    .dashboard-main {
+        padding: 1rem;
+    }
+    
     .action-cards {
         grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
     .action-card {
@@ -1312,6 +1348,11 @@ input:checked + .slider:before {
         width: 60px;
         height: 60px;
         font-size: 1.5rem;
+    }
+    
+    .widgets-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
     .widget-card {
@@ -1344,7 +1385,7 @@ input:checked + .slider:before {
     }
     
     .map-container {
-        height: 150px;
+        height: 200px;
     }
     
     .simple-map-placeholder i {
@@ -1357,6 +1398,72 @@ input:checked + .slider:before {
     
     .simple-map-placeholder p {
         font-size: 0.7rem;
+    }
+    
+    /* All Sections Mobile */
+    .trips-section,
+    .earnings-section,
+    .schedule-section,
+    .profile-section,
+    .help-section {
+        padding: 1rem;
+        min-height: calc(100vh - 60px);
+    }
+    
+    .section-header {
+        padding: 1rem;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .section-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .back-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Trips Section Mobile */
+    .trips-content {
+        height: calc(100vh - 140px);
+        overflow-y: auto;
+    }
+    
+    .trip-tabs {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .tab-btn {
+        flex: 1;
+        min-width: 100px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .trips-list {
+        height: calc(100vh - 240px);
+        overflow-y: auto;
+    }
+    
+    /* Map Section Mobile */
+    .map-section {
+        padding: 1rem;
+    }
+    
+    #driverMap {
+        height: calc(100vh - 140px) !important;
+        border-radius: 12px;
+    }
+    
+    /* Sidebar Toggle Mobile */
+    .sidebar-toggle {
+        display: block !important;
     }
 }
 
