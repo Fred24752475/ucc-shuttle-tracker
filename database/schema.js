@@ -7,6 +7,7 @@ const createTables = async () => {
         // Drop existing tables in reverse order to avoid foreign key constraints
         await client.query('DROP TABLE IF EXISTS messages CASCADE');
         await client.query('DROP TABLE IF EXISTS conversations CASCADE');
+        await client.query('DROP TABLE IF EXISTS friendships CASCADE');
         await client.query('DROP TABLE IF EXISTS password_resets CASCADE');
         await client.query('DROP TABLE IF EXISTS notifications CASCADE');
         await client.query('DROP TABLE IF EXISTS system_settings CASCADE');
@@ -94,6 +95,19 @@ const createTables = async () => {
                 expires_at TIMESTAMP NOT NULL,
                 used BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Friendships table (for friend requests and connections)
+        await client.query(`
+            CREATE TABLE friendships (
+                id SERIAL PRIMARY KEY,
+                requester_id INTEGER NOT NULL REFERENCES users(id),
+                receiver_id INTEGER NOT NULL REFERENCES users(id),
+                status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'blocked')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(requester_id, receiver_id)
             )
         `);
 

@@ -363,6 +363,244 @@ app.post('/api/trips', authenticateToken, async (req, res) => {
     }
 });
 
+// ============= FRIEND REQUEST SYSTEM =============
+
+// Get all students (for finding friends)
+app.get('/api/students/all', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT id, name, email, student_id, created_at 
+            FROM users 
+            WHERE role = 'student' AND id != $1
+            ORDER BY name ASC
+        `, [req.user.id]);
+        
+        res.json({ success: true, students: result.rows });
+    } catch (error) {
+        console.error('Error fetching students:', error);
+        res.status(500).json({ success: false, message: 'Error fetching students' });
+    } finally {
+        client.release();
+    }
+});
+
+// Send friend request
+app.post('/api/friends/request', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { receiver_id } = req.body;
+        
+        // Check if already friends or request exists
+        const existing = await client.query(`
+            SELECT * FROM friendships 
+            WHERE (requester_id = $1 AND receiver_id = $2) 
+            OR (requester_id = $2 AND receiver_id = $1)
+        `, [req.user.id, receiver_id]);
+        
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'Friend request already exists' });
+        }
+        
+        await client.query(`
+            INSERT INTO friendships (requester_id, receiver_id, status) 
+            VALUES ($1, $2, 'pending')
+        `, [req.user.id, receiver_id]);
+        
+        // Emit socket event
+        io.emit(`friend_request_${receiver_id}`, {
+            from: req.user.id,
+            message: 'New friend request'
+        });
+        
+        res.json({ success: true, message: 'Friend request sent' });
+    } catch (error) {
+        console.error('Error sending friend request:', error);
+        res.status(500).json({ success: false, message: 'Error sending request' });
+    } finally {
+        client.release();
+    }
+});
+
+// Get friend requests (received)
+app.get('/api/friends/requests', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT f.id, f.requester_id, f.status, f.created_at,
+                   u.name, u.email, u.student_id
+            FROM friendships f
+            JOIN users u ON f.requester_id = u.id
+            WHERE f.receiver_id = $1 AND f.status = 'pending'
+            ORDER BY f.created_at DESC
+        `, [req.user.id]);
+        
+        res.json({ success: true, requests: result.rows });
+    } catch (error) {
+        console.error('Error fetching requests:', error);
+        res.status(500).json({ success: false, message: 'Error fetching requests' });
+    } finally {
+        client.release();
+    }
+});
+
+// Accept friend request
+app.post('/api/friends/accept/:id', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query(`
+            UPDATE friendships 
+            SET status = 'accepted', updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $1 AND receiver_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        res.json({ success: true, message: 'Friend request accepted' });
+    } catch (error) {
+        console.error('Error accepting request:', error);
+        res.status(500).json({ success: false, message: 'Error accepting request' });
+    } finally {
+        client.release();
+    }
+});
+
+// Reject friend request
+app.post('/api/friends/reject/:id', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query(`
+            UPDATE friendships 
+            SET status = 'rejected', updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $1 AND receiver_id = $2
+        `, [req.params.id, req.user.id]);
+        
+        res.json({ success: true, message: 'Friend request rejected' });
+    } catch (error) {
+        console.error('Error rejecting request:', error);
+        res.status(500).json({ success: false, message: 'Error rejecting request' });
+    } finally {
+        client.release();
+    }
+});
+
+// Get all friends
+app.get('/api/friends', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT DISTINCT
+                CASE 
+                    WHEN f.requester_id = $1 THEN f.receiver_id
+                    ELSE f.requester_id
+                END as friend_id,
+                u.name, u.email, u.student_id, u.last_login,
+                f.created_at as friends_since
+            FROM friendships f
+            JOIN users u ON (
+                CASE 
+                    WHEN f.requester_id = $1 THEN f.receiver_id
+                    ELSE f.requester_id
+                END = u.id
+            )
+            WHERE (f.requester_id = $1 OR f.receiver_id = $1) 
+            AND f.status = 'accepted'
+            ORDER BY u.name ASC
+        `, [req.user.id]);
+        
+        res.json({ success: true, friends: result.rows });
+    } catch (error) {
+        console.error('Error fetching friends:', error);
+        res.status(500).json({ success: false, message: 'Error fetching friends' });
+    } finally {
+        client.release();
+    }
+});
+
+// Send message (only to friends)
+app.post('/api/messages/send', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { receiver_id, content } = req.body;
+        
+        // Check if they are friends
+        const friendship = await client.query(`
+            SELECT * FROM friendships 
+            WHERE ((requester_id = $1 AND receiver_id = $2) 
+            OR (requester_id = $2 AND receiver_id = $1))
+            AND status = 'accepted'
+        `, [req.user.id, receiver_id]);
+        
+        if (friendship.rows.length === 0) {
+            return res.status(403).json({ success: false, message: 'You can only message friends' });
+        }
+        
+        // Get or create conversation
+        let conversation = await client.query(`
+            SELECT id FROM conversations 
+            WHERE (participant1_id = $1 AND participant2_id = $2)
+            OR (participant1_id = $2 AND participant2_id = $1)
+        `, [req.user.id, receiver_id]);
+        
+        let conversationId;
+        if (conversation.rows.length === 0) {
+            const newConv = await client.query(`
+                INSERT INTO conversations (participant1_id, participant2_id) 
+                VALUES ($1, $2) RETURNING id
+            `, [req.user.id, receiver_id]);
+            conversationId = newConv.rows[0].id;
+        } else {
+            conversationId = conversation.rows[0].id;
+        }
+        
+        // Insert message
+        const message = await client.query(`
+            INSERT INTO messages (conversation_id, sender_id, content) 
+            VALUES ($1, $2, $3) RETURNING *
+        `, [conversationId, req.user.id, content]);
+        
+        // Emit socket event
+        io.emit(`new_message_${receiver_id}`, {
+            from: req.user.id,
+            content,
+            timestamp: message.rows[0].created_at
+        });
+        
+        res.json({ success: true, message: message.rows[0] });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        res.status(500).json({ success: false, message: 'Error sending message' });
+    } finally {
+        client.release();
+    }
+});
+
+// Get messages with a friend
+app.get('/api/messages/:friendId', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT m.*, u.name as sender_name
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            JOIN users u ON m.sender_id = u.id
+            WHERE c.id IN (
+                SELECT id FROM conversations 
+                WHERE (participant1_id = $1 AND participant2_id = $2)
+                OR (participant1_id = $2 AND participant2_id = $1)
+            )
+            ORDER BY m.created_at ASC
+        `, [req.user.id, req.params.friendId]);
+        
+        res.json({ success: true, messages: result.rows });
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+        res.status(500).json({ success: false, message: 'Error fetching messages' });
+    } finally {
+        client.release();
+    }
+});
+
+// ============= END FRIEND REQUEST SYSTEM =============
+
 // Admin endpoints
 app.get('/api/admin/overview', authenticateToken, requireRole(['admin']), async (req, res) => {
     const client = await pool.connect();
