@@ -488,14 +488,14 @@
             </div>
             <div class="messages-content">
                 <div class="chat-tabs">
-                    <button class="chat-tab-btn active" data-tab="friends" onclick="showFriendsTab('friends')">
+                    <button class="chat-tab-btn active" data-tab="friends">
                         👥 My Friends
                     </button>
-                    <button class="chat-tab-btn" data-tab="requests" onclick="showFriendsTab('requests')">
+                    <button class="chat-tab-btn" data-tab="requests">
                         📬 Requests
                         <span class="notification-badge" id="friendRequestBadge" style="display: none;">0</span>
                     </button>
-                    <button class="chat-tab-btn" data-tab="find" onclick="showFriendsTab('find')">
+                    <button class="chat-tab-btn" data-tab="find">
                         🔍 Find Friends
                     </button>
                 </div>
@@ -517,7 +517,7 @@
                 <!-- Find Friends Tab -->
                 <div class="friends-tab-content" id="findTabContent" style="display: none;">
                     <div class="search-bar">
-                        <input type="text" id="studentSearch" placeholder="🔍 Search students by name..." onkeyup="filterStudents()">
+                        <input type="text" id="studentSearch" placeholder="🔍 Search students by name...">
                     </div>
                     <div id="allStudentsList" class="students-list">
                         <div class="loading-spinner"></div>
@@ -550,40 +550,19 @@
         </main>
 
         <script>
-            function showFriendsTab(tab) {
-                // Hide all tabs
-                document.getElementById('friendsTabContent').style.display = 'none';
-                document.getElementById('requestsTabContent').style.display = 'none';
-                document.getElementById('findTabContent').style.display = 'none';
-                document.getElementById('chatContainer').style.display = 'none';
-                
-                // Remove active class
-                document.querySelectorAll('.chat-tab-btn').forEach(btn => btn.classList.remove('active'));
-                
-                // Show selected tab
-                if (tab === 'friends') {
-                    document.getElementById('friendsTabContent').style.display = 'block';
-                    document.querySelector('[data-tab="friends"]').classList.add('active');
-                    if (window.friendsSystem) friendsSystem.loadFriends();
-                } else if (tab === 'requests') {
-                    document.getElementById('requestsTabContent').style.display = 'block';
-                    document.querySelector('[data-tab="requests"]').classList.add('active');
-                    if (window.friendsSystem) friendsSystem.loadFriendRequests();
-                } else if (tab === 'find') {
-                    document.getElementById('findTabContent').style.display = 'block';
-                    document.querySelector('[data-tab="find"]').classList.add('active');
-                    if (window.friendsSystem) friendsSystem.loadAllStudents();
+            // Initialize friends system when messages section is shown
+            document.addEventListener('DOMContentLoaded', () => {
+                const messagesNav = document.querySelector('[data-section="messages"]');
+                if (messagesNav) {
+                    messagesNav.addEventListener('click', () => {
+                        setTimeout(() => {
+                            if (window.friendsSystem) {
+                                friendsSystem.init();
+                            }
+                        }, 100);
+                    });
                 }
-            }
-            
-            function filterStudents() {
-                const search = document.getElementById('studentSearch').value.toLowerCase();
-                const cards = document.querySelectorAll('.student-card');
-                cards.forEach(card => {
-                    const name = card.querySelector('h4').textContent.toLowerCase();
-                    card.style.display = name.includes(search) ? 'flex' : 'none';
-                });
-            }
+            });
         </script>
 
 
@@ -1447,6 +1426,7 @@ function showMapError() {
     </script>
 
     <!-- Simple Dashboard Navigation (loaded after real map) -->
+    <script src="../js/api-config.js"></script>
     <script src="../js/dashboard-simple-working.js"></script>
     <script src="../js/student-friends.js"></script>
 </body>
