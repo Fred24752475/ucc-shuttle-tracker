@@ -40,7 +40,7 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.socket.io", "https://unpkg.com"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "ws:", "wss:"],
+            connectSrc: ["'self'", "ws:", "wss:", "http://ucc-shuttle-tracker.onrender.com", "https://ucc-shuttle-tracker.onrender.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"]
         }
     }
