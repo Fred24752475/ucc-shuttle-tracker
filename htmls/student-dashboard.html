@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../css/student-dashboard.css">
     <link rel="stylesheet" href="../css/student-dashboard-features.css">
     <link rel="stylesheet" href="../css/student-dashboard-extended.css">
+    <link rel="stylesheet" href="../css/student-friends.css">
     <link rel="stylesheet" href="../css/ai-assistant-simple.css">
     <link rel="stylesheet" href="../css/messaging-system.css">
     <link rel="manifest" href="manifest.json">
@@ -480,54 +481,64 @@
         <!-- Messages Section -->
         <main class="messages-section" id="messagesSection" style="display: none;">
             <div class="section-header">
-                <h2>💬 Messages</h2>
+                <h2>💬 Friends & Messages</h2>
                 <button class="back-btn" onclick="showDashboard(); return false;">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </button>
             </div>
             <div class="messages-content">
                 <div class="chat-tabs">
-                    <button class="chat-tab-btn active" data-tab="all">All Users</button>
-                    <button class="chat-tab-btn" data-tab="students">Students</button>
-                    <button class="chat-tab-btn" data-tab="drivers">Drivers</button>
-                    <button class="chat-tab-btn" data-tab="support">Support Team</button>
+                    <button class="chat-tab-btn active" data-tab="friends" onclick="showFriendsTab('friends')">
+                        👥 My Friends
+                    </button>
+                    <button class="chat-tab-btn" data-tab="requests" onclick="showFriendsTab('requests')">
+                        📬 Requests
+                        <span class="notification-badge" id="friendRequestBadge" style="display: none;">0</span>
+                    </button>
+                    <button class="chat-tab-btn" data-tab="find" onclick="showFriendsTab('find')">
+                        🔍 Find Friends
+                    </button>
                 </div>
-                <div class="chat-container">
-                    <div class="chat-sidebar">
-                        <div class="chat-list" id="chatList">
-                            <div class="loading-spinner"></div>
-                        </div>
+                
+                <!-- Friends List Tab -->
+                <div class="friends-tab-content" id="friendsTabContent">
+                    <div id="friendsList" class="friends-list">
+                        <div class="loading-spinner"></div>
                     </div>
+                </div>
+                
+                <!-- Friend Requests Tab -->
+                <div class="friends-tab-content" id="requestsTabContent" style="display: none;">
+                    <div id="friendRequestsList" class="friend-requests-list">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+                
+                <!-- Find Friends Tab -->
+                <div class="friends-tab-content" id="findTabContent" style="display: none;">
+                    <div class="search-bar">
+                        <input type="text" id="studentSearch" placeholder="🔍 Search students by name..." onkeyup="filterStudents()">
+                    </div>
+                    <div id="allStudentsList" class="students-list">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+                
+                <!-- Chat Container -->
+                <div class="chat-container" style="display: none;" id="chatContainer">
                     <div class="chat-main">
                         <div class="chat-header" id="chatHeader">
                             <div class="no-chat-selected">
                                 <i class="fas fa-comments"></i>
-                                <p>Select a conversation to start messaging</p>
+                                <p>Select a friend to start chatting</p>
                             </div>
                         </div>
                         <div class="chat-messages" id="chatMessages" style="display: none;">
                             <!-- Messages will be rendered here -->
                         </div>
-                        <div class="typing-indicator" id="typingIndicator" style="display: none;">
-                            <span>Someone is typing</span>
-                            <div class="typing-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                        </div>
                         <div class="chat-input" id="chatInput" style="display: none;">
                             <div class="input-wrapper">
                                 <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"></textarea>
-                                <div class="input-actions">
-                                    <button class="input-btn" id="emojiBtn" title="Add Emoji">
-                                        <i class="fas fa-smile"></i>
-                                    </button>
-                                    <button class="input-btn" id="attachBtn" title="Attach File">
-                                        <i class="fas fa-paperclip"></i>
-                                    </button>
-                                    <input type="file" id="fileInput" style="display: none;" accept="image/*,document/*">
-                                </div>
                             </div>
                             <button class="send-btn" id="sendMessageBtn" title="Send Message">
                                 <i class="fas fa-paper-plane"></i>
@@ -537,6 +548,43 @@
                 </div>
             </div>
         </main>
+
+        <script>
+            function showFriendsTab(tab) {
+                // Hide all tabs
+                document.getElementById('friendsTabContent').style.display = 'none';
+                document.getElementById('requestsTabContent').style.display = 'none';
+                document.getElementById('findTabContent').style.display = 'none';
+                document.getElementById('chatContainer').style.display = 'none';
+                
+                // Remove active class
+                document.querySelectorAll('.chat-tab-btn').forEach(btn => btn.classList.remove('active'));
+                
+                // Show selected tab
+                if (tab === 'friends') {
+                    document.getElementById('friendsTabContent').style.display = 'block';
+                    document.querySelector('[data-tab="friends"]').classList.add('active');
+                    if (window.friendsSystem) friendsSystem.loadFriends();
+                } else if (tab === 'requests') {
+                    document.getElementById('requestsTabContent').style.display = 'block';
+                    document.querySelector('[data-tab="requests"]').classList.add('active');
+                    if (window.friendsSystem) friendsSystem.loadFriendRequests();
+                } else if (tab === 'find') {
+                    document.getElementById('findTabContent').style.display = 'block';
+                    document.querySelector('[data-tab="find"]').classList.add('active');
+                    if (window.friendsSystem) friendsSystem.loadAllStudents();
+                }
+            }
+            
+            function filterStudents() {
+                const search = document.getElementById('studentSearch').value.toLowerCase();
+                const cards = document.querySelectorAll('.student-card');
+                cards.forEach(card => {
+                    const name = card.querySelector('h4').textContent.toLowerCase();
+                    card.style.display = name.includes(search) ? 'flex' : 'none';
+                });
+            }
+        </script>
 
 
         <!-- Help Section -->
@@ -1400,6 +1448,7 @@ function showMapError() {
 
     <!-- Simple Dashboard Navigation (loaded after real map) -->
     <script src="../js/dashboard-simple-working.js"></script>
+    <script src="../js/student-friends.js"></script>
 </body>
 
 </html>
