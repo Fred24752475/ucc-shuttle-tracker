@@ -18,18 +18,18 @@ const io = socketIo(server, {
 });
 
 // Initialize database
-(async () => {
-    try {
-        console.log('Attempting database connection...');
-        await createTables();
-        console.log('Tables created successfully');
-        await seedData();
-        console.log('Database seeded successfully');
-    } catch (error) {
-        console.error('Database initialization failed:', error.message);
-        console.log('Server will continue without database...');
-    }
-})();
+// (async () => {
+//     try {
+//         console.log('Attempting database connection...');
+//         await createTables();
+//         console.log('Tables created successfully');
+//         await seedData();
+//         console.log('Database seeded successfully');
+//     } catch (error) {
+//         console.error('Database initialization failed:', error.message);
+//         console.log('Server will continue without database...');
+//     }
+// })();
 
 // Middleware
 app.use(helmet({
