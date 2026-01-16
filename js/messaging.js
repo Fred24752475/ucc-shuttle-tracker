@@ -5,7 +5,7 @@
 
 class UCCMessaging {
     constructor() {
-        this.apiBaseUrl = 'http://localhost:3001/api/messaging';
+        this.apiBaseUrl = '/api/messaging';
         this.token = localStorage.getItem('ucc_token') || null;
         this.user = JSON.parse(localStorage.getItem('ucc_user') || 'null');
         this.currentConversation = null;

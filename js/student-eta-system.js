@@ -120,7 +120,7 @@ async function selectPickupLocation(locationName, latitude, longitude) {
     }
     
     try {
-        const response = await fetch('http://localhost:3001/api/student/pickup-location', {
+        const response = await fetch('/api/student/pickup-location', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -327,7 +327,7 @@ async function loadPickupLocation() {
     if (!token) return;
     
     try {
-        const response = await fetch('http://localhost:3001/api/student/pickup-location', {
+        const response = await fetch('/api/student/pickup-location', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
