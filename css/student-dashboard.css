@@ -740,7 +740,16 @@ body {
     }
     
     .mobile-overlay {
+        display: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease;
+    }
+    
+    .mobile-overlay.active {
         display: block;
+        opacity: 1;
+        visibility: visible;
     }
     
     .header-content {
