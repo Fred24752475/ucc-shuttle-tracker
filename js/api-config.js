@@ -2,15 +2,16 @@
 const API_CONFIG = {
     getBaseURL: function() {
         const hostname = window.location.hostname;
-        const port = '3001';
         
-        // If accessing via localhost, use localhost
+        // If accessing via localhost, use localhost with port
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return `http://localhost:${port}`;
+            return `http://localhost:3001`;
         }
         
-        // Otherwise use the current hostname (network IP)
-        return `http://${hostname}:${port}`;
+        // For Render or other hosting, use the hostname without port
+        // Render handles the port automatically
+        const protocol = window.location.protocol; // http: or https:
+        return `${protocol}//${hostname}`;
     },
     
     API_URL: null
