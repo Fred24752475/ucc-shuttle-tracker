@@ -1,0 +1,17 @@
+version: "1"
+services:
+  - type: web
+    name: ucc-shuttle-tracker
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+databases:
+  - name: ucc-shuttle-db
+    databaseName: ucc_shuttle_tracker
+    user: postgres

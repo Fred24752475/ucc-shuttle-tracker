@@ -1,0 +1,50 @@
+{
+  "name": "UCC Shuttle Tracker",
+  "short_name": "UCC Shuttle",
+  "description": "University of Cape Coast Shuttle Tracking System",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1565c0",
+  "theme_color": "#1565c0",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "lang": "en",
+  "categories": ["transportation", "navigation", "utilities"],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiMxNTY1YzAiLz4KPHRleHQgeD0iOTYiIHk9Ijk2IiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSI0OCIgZm9udC1mYW1pbHk9IkFyaWFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5PC9leHQ+Cjwvc3ZnPg==",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Track Shuttle",
+      "short_name": "Track",
+      "description": "Track your nearest shuttle",
+      "url": "./index.html?action=track",
+      "icons": [{ "src": "icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Emergency",
+      "short_name": "SOS",
+      "description": "Emergency assistance",
+      "url": "./index.html?action=emergency",
+      "icons": [{ "src": "icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}

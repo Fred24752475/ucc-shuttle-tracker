@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test - UCC Shuttle Tracker</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #667eea; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #5568d3; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #ffebee; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Login State Checker</h1>
+        
+        <div id="status"></div>
+        
+        <h3>Actions:</h3>
+        <button id="checkBtn">Check Login State</button>
+        <button id="clearBtn">Clear Login & Logout</button>
+        <button id="studentBtn">Test Student Login</button>
+        <button id="driverBtn">Test Driver Login</button>
+        <button id="adminBtn">Test Admin Login</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Add event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('checkBtn').addEventListener('click', checkLoginState);
+            document.getElementById('clearBtn').addEventListener('click', clearLogin);
+            document.getElementById('studentBtn').addEventListener('click', () => testLogin('student'));
+            document.getElementById('driverBtn').addEventListener('click', () => testLogin('driver'));
+            document.getElementById('adminBtn').addEventListener('click', () => testLogin('admin'));
+            
+            // Auto-check on load
+            checkLoginState();
+        });
+        
+        function checkLoginState() {
+            const token = localStorage.getItem('ucc_token');
+            const user = localStorage.getItem('ucc_user');
+            const result = document.getElementById('result');
+            
+            if (token && user) {
+                const userData = JSON.parse(user);
+                result.innerHTML = `
+                    <div class="info">
+                        <h3>✅ Currently Logged In</h3>
+                        <p><strong>Name:</strong> ${userData.name}</p>
+                        <p><strong>Email:</strong> ${userData.email}</p>
+                        <p><strong>Role:</strong> ${userData.role}</p>
+                        <p><strong>Token:</strong> ${token.substring(0, 20)}...</p>
+                        <pre>${JSON.stringify(userData, null, 2)}</pre>
+                    </div>
+                `;
+            } else {
+                result.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Not Logged In</h3>
+                        <p>No login data found in localStorage</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function clearLogin() {
+            localStorage.clear();
+            document.getElementById('result').innerHTML = `
+                <div class="info">
+                    <h3>✅ Cleared!</h3>
+                    <p>All login data has been removed. You can now test fresh logins.</p>
+                </div>
+            `;
+        }
+        
+        async function testLogin(role) {
+            const credentials = {
+                student: { email: 'student@ucc.edu.gh', password: 'student123' },
+                driver: { email: 'driver@ucc.edu.gh', password: 'driver123' },
+                admin: { email: 'admin@ucc.edu.gh', password: 'admin123' }
+            };
+            
+            const cred = credentials[role];
+            const result = document.getElementById('result');
+            
+            result.innerHTML = '<div class="info">⏳ Testing login...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cred)
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <div class="info">
+                        <h3>📡 Server Response:</h3>
+                        <p><strong>Success:</strong> ${data.success}</p>
+                        <p><strong>User Role:</strong> ${data.user?.role || 'N/A'}</p>
+                        <p><strong>Expected:</strong> ${role}</p>
+                        <p><strong>Match:</strong> ${data.user?.role === role ? '✅ YES' : '❌ NO'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        
+                        ${data.success ? `
+                            <p><strong>Should redirect to:</strong> ${data.user.role}-dashboard.html</p>
+                        ` : ''}
+                    </div>
+                `;
+                
+                if (data.success) {
+                    localStorage.setItem('ucc_token', data.token);
+                    localStorage.setItem('ucc_user', JSON.stringify(data.user));
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

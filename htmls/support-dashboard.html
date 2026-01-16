@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Support Dashboard - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../../css/support-dashboard.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff9800">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/../css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-headset"></i>
+                <span>UCC Support</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item active">
+                    <a href="#dashboard" onclick="handleNavClick('dashboard', event)">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Support Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#messages" onclick="handleNavClick('messages', event)">
+                        <i class="fas fa-comments"></i>
+                        <span>Messages</span>
+                        <span class="notification-badge" id="messageBadge" style="display: none;">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#tickets" onclick="handleNavClick('tickets', event)">
+                        <i class="fas fa-ticket-alt"></i>
+                        <span>Support Tickets</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#knowledge" onclick="handleNavClick('knowledge', event)">
+                        <i class="fas fa-book"></i>
+                        <span>Knowledge Base</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#reports" onclick="handleNavClick('reports', event)">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <img src="https://ui-avatars.com/api/?name=Support&background=ff9800&color=fff" alt="User">
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Support Agent</div>
+                    <div class="user-role">Customer Support</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-content">
+                <div class="welcome-message">
+                    <h1>Welcome back, <span id="supportName">Support</span>! 👋</h1>
+                    <p>Your customer support dashboard and messaging center</p>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="activeConversationsCount">0</span>
+                        <span class="stat-label">Active Chats</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="todayTicketsCount">0</span>
+                        <span class="stat-label">Today's Tickets</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="responseTimeCount">0m</span>
+                        <span class="stat-label">Avg Response</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-content" id="dashboardContent">
+            <!-- Support Status Card -->
+            <section class="support-status">
+                <div class="status-card">
+                    <div class="status-header">
+                        <h2>Support Status</h2>
+                        <div class="status-toggle">
+                            <span class="status-label">Available</span>
+                            <label class="switch">
+                                <input type="checkbox" id="supportStatusToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="status-info">
+                        <div class="status-indicator online"></div>
+                        <span class="status-text">Available for chats</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Support Stats -->
+            <section class="support-stats">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-comments stat-icon messages"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalMessagesCount">0</h3>
+                            <p>Total Messages</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-users stat-icon active"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="activeUsersCount">0</h3>
+                            <p>Active Users</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-clock stat-icon response"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="avgResponseTime">0m</h3>
+                            <p>Avg Response Time</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-star stat-icon satisfaction"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="satisfactionRate">0%</h3>
+                            <p>Customer Satisfaction</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activities -->
+            <section class="recent-activities">
+                <h2>Recent Support Activities</h2>
+                <div class="activities-list" id="activitiesList">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-comment"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4>New chat request</h4>
+                            <p>Student needs help with shuttle booking</p>
+                            <span class="activity-time">2 minutes ago</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Messages Section -->
+        <main class="messages-section" id="messagesSection" style="display: none;">
+            <div class="section-header">
+                <h2>💬 Support Messages</h2>
+                <button class="back-btn" onclick="handleNavClick('dashboard', event)">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="messages-content">
+                <div class="chat-container">
+                    <div class="chat-sidebar">
+                        <div class="chat-queue" id="chatQueue">
+                            <h3>Waiting Queue</h3>
+                            <div class="queue-list" id="queueList">
+                                <div class="loading-spinner"></div>
+                            </div>
+                        </div>
+                        <div class="chat-active" id="chatActive">
+                            <h3>Active Conversations</h3>
+                            <div class="conversations-list" id="conversationsList">
+                                <div class="loading-spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header" id="chatHeader">
+                            <h3>Select a conversation</h3>
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="no-chat-selected">
+                                <i class="fas fa-headset"></i>
+                                <p>Choose a conversation to start helping users</p>
+                            </div>
+                        </div>
+                        <div class="chat-input" id="chatInput" style="display: none;">
+                            <div class="quick-replies">
+                                <button onclick="sendQuickReply('Hello! How can I help you today?')">Greeting</button>
+                                <button onclick="sendQuickReply('I understand your concern. Let me help you with that.')">Acknowledge</button>
+                                <button onclick="sendQuickReply('Thank you for your patience. I\'m looking into this for you.')">Follow up</button>
+                                <button onclick="sendQuickReply('Is there anything else I can help you with?')">Close</button>
+                            </div>
+                            <div class="message-input-container">
+                                <input type="text" placeholder="Type your support message..." id="messageInput">
+                                <button onclick="sendMessage()">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../../js/support-messaging.js"></script>
+</body>
+</html>

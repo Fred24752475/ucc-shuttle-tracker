@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Student Registration - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../js/database.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <style>
+        .student-register-container {
+            max-width: 500px;
+            margin: 30px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .student-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .student-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #1565c0, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .student-header h1 {
+            color: #1565c0;
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .student-header p {
+            color: #666;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .role-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #1565c0, #4facfe);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1565c0;
+            box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #1565c0, #4facfe);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(21, 101, 192, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .back-link a {
+            color: #1565c0;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .student-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1565c0;
+        }
+
+        .student-info h3 {
+            color: #1565c0;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .student-info p {
+            color: #666;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .field-error {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .form-group input.error {
+            border-color: #f44336;
+            box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .student-register-container {
+                margin: 20px auto;
+                padding: 30px 20px;
+                max-width: 95%;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .student-header h1 {
+                font-size: 28px;
+            }
+
+            .student-icon {
+                font-size: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .student-register-container {
+                margin: 10px;
+                padding: 25px 15px;
+            }
+
+            .student-header h1 {
+                font-size: 24px;
+            }
+
+            .student-icon {
+                font-size: 40px;
+            }
+
+            .form-group input {
+                padding: 18px;
+                font-size: 16px;
+            }
+
+            .submit-btn {
+                padding: 20px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body class="login-screen">
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-header">
+            <h3 style="color: white; margin: 0;">🎓 Student Register</h3>
+            <button class="hamburger-menu" onclick="toggleMobileMenu()">☰</button>
+        </div>
+        <ul class="mobile-nav-items">
+            <li><a href="../htmls/student-login.html" onclick="closeMobileMenu()">🎓 Student Login</a></li>
+            <li><a href="../htmls/student-register.html" onclick="closeMobileMenu()">➕ Student Register</a></li>
+            <li><a href="../htmls/index.html" onclick="closeMobileMenu()">🏠 Main Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Desktop Navigation -->
+    <nav class="desktop-nav" id="desktopNav">
+        <a href="../htmls/student-login.html">🎓 Student Login</a>
+        <a href="../htmls/student-register.html">➕ Student Register</a>
+        <a href="../htmls/index.html">🏠 Main Portal</a>
+    </nav>
+
+    <div class="student-register-container">
+        <div class="student-header">
+            <div class="student-icon">🎓</div>
+            <h1>Student Registration</h1>
+            <p>Create your UCC Shuttle Tracker student account</p>
+            <div class="role-badge">Student Portal</div>
+        </div>
+
+        <div class="student-info">
+            <h3>🎓 Student Account Benefits</h3>
+            <p>• Track shuttle availability in real-time</p>
+            <p>• Request rides to campus locations</p>
+            <p>• View trip history and statistics</p>
+            <p>• Receive notifications for shuttle updates</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <form id="studentRegisterForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">First Name *</label>
+                    <input type="text" id="firstName" name="firstName" required placeholder="John">
+                </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name *</label>
+                    <input type="text" id="lastName" name="lastName" required placeholder="Doe">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required placeholder="student@ucc.edu">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required placeholder="+233XXXXXXXXX">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" required placeholder="Create a strong password">
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password *</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required
+                    placeholder="Re-enter your password">
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">🎓 Create Student Account</button>
+        </form>
+
+        <div class="back-link">
+            <p>Already have an account? <a href="../htmls/student-login.html">Login as Student</a></p>
+            <p>Forgot your password? <a href="../htmls/password-reset.html">Reset Password</a></p>
+            <p><a href="../htmls/index.html">← Back to Main Portal</a></p>
+        </div>
+    </div>
+
+    <script>
+        let formSubmitted = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🎓 Student Registration page loaded');
+
+            // Initialize database connection
+            if (window.uccDB) {
+                console.log('📡 Database module loaded');
+                testDatabaseConnection();
+            } else {
+                console.log('⚠️ Database module not loaded - using demo mode');
+            }
+        });
+
+        // Form validation
+        function validateStudentForm() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            console.log('🔍 Validating student form:', { firstName, lastName, email, phone });
+
+            // Clear previous errors
+            clearValidationErrors();
+
+            let isValid = true;
+
+            // Validate required fields
+            if (!firstName || firstName.length < 2) {
+                showFieldError('firstName', 'First name must be at least 2 characters');
+                isValid = false;
+            }
+
+            if (!lastName || lastName.length < 2) {
+                showFieldError('lastName', 'Last name must be at least 2 characters');
+                isValid = false;
+            }
+
+            if (!email || !email.includes('@') || !email.includes('.')) {
+                showFieldError('email', 'Please enter a valid email address');
+                isValid = false;
+            }
+
+            if (!phone || phone.length < 10) {
+                showFieldError('phone', 'Phone number must be at least 10 digits');
+                isValid = false;
+            }
+
+            if (!password || password.length < 6) {
+                showFieldError('password', 'Password must be at least 6 characters');
+                isValid = false;
+            }
+
+            if (password !== confirmPassword) {
+                showFieldError('confirmPassword', 'Passwords do not match');
+                isValid = false;
+            }
+
+            console.log('✅ Student form validation result:', isValid);
+            return isValid;
+        }
+
+        function showFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.style.borderColor = '#f44336';
+                field.style.boxShadow = '0 0 5px rgba(244, 67, 54, 0.3)';
+
+                let errorDiv = field.parentNode.querySelector('.field-error');
+                if (!errorDiv) {
+                    errorDiv = document.createElement('div');
+                    errorDiv.className = 'field-error';
+                    field.parentNode.appendChild(errorDiv);
+                }
+                errorDiv.textContent = message;
+            }
+        }
+
+        function clearValidationErrors() {
+            document.querySelectorAll('.field-error').forEach(error => error.remove());
+
+            ['firstName', 'lastName', 'email', 'phone', 'password', 'confirmPassword'].forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.style.borderColor = '#e1e5e9';
+                    field.style.boxShadow = 'none';
+                }
+            });
+        }
+
+        // Form submission
+        document.getElementById('studentRegisterForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            if (formSubmitted) {
+                console.log('Form already submitted');
+                return;
+            }
+
+            console.log('🎓 Starting student registration...');
+
+            // Validation
+            if (!validateStudentForm()) {
+                console.log('❌ Student form validation failed');
+                return;
+            }
+
+            // Get form data
+            const formData = {
+                name: document.getElementById('firstName').value.trim() + ' ' + document.getElementById('lastName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                password: document.getElementById('password').value,
+                role: 'student' // Hardcoded for student registration
+            };
+
+            console.log('Student form data prepared:', formData);
+
+            formSubmitted = true;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            try {
+                // Try to create account via API
+                console.log('🔑 Attempting API student registration...');
+                console.log('🔍 Form data being sent:', formData);
+                
+                const response = await fetch('http://localhost:3001/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                console.log('API Response:', result);
+
+                if (response.ok && result.success) {
+                    console.log('✅ Student account created via API');
+
+                    // Show enhanced success message
+                    const successMsg = `✅ Student Account Created Successfully! 🎓
+
+👤 Welcome, ${formData.firstName} ${formData.lastName}!
+
+📧 Email: ${formData.email}
+🎭 Role: Student
+📱 Phone: ${formData.phone}
+
+Your student account has been saved to the database and you can now:
+• Track shuttle availability in real-time
+• Request rides to campus locations  
+• View trip history and statistics
+• Receive notifications for shuttle updates
+
+Redirecting to student login in 3 seconds...`;
+
+                    showSuccess(successMsg);
+
+                    // Store user data temporarily for reference
+                    localStorage.setItem('ucc_last_registered_email', formData.email);
+
+                    setTimeout(() => {
+                        window.location.href = '../htmls/student-login.html';
+                    }, 3000);
+                    return;
+                } else {
+                    console.log('❌ API student registration failed:', result.message);
+                    showError(result.message || 'Failed to create student account. Please try again.');
+
+                    formSubmitted = false;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🎓 Create Student Account';
+                }
+
+            } catch (error) {
+                console.error('❌ Student registration error:', error);
+                showError('❌ Server Connection Error\n\nCannot connect to the database server.\n\nPlease make sure:\n1. The server is running (node server.js)\n2. The database is initialized\n3. You have an internet connection\n\nThen try again.');
+
+                formSubmitted = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🎓 Create Student Account';
+            }
+        });
+
+        // Test database connection
+        async function testDatabaseConnection() {
+            try {
+                const response = await fetch('http://localhost:3001/api/ping');
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Database connection verified');
+                } else {
+                    console.log('⚠️ Database connection issue:', data.error);
+                }
+            } catch (error) {
+                console.log('❌ Database connection test failed:', error);
+            }
+        }
+
+        // Message functions
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+
+            document.getElementById('successMessage').style.display = 'none';
+
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+
+            document.getElementById('errorMessage').style.display = 'none';
+
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Mobile menu functions
+        function toggleMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.classList.toggle('active');
+            }
+        }
+
+        function closeMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.classList.remove('active');
+            }
+        }
+
+        // Prevent form resubmission
+        window.addEventListener('beforeunload', function () {
+            formSubmitted = false;
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../css/driver-dashboard.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* Inline styles to avoid CSP font issues */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <!-- Unified Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-bus"></i>
+                <span>UCC Driver</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item active" data-section="home">
+                    <a href="#home">
+                        <span style="width:20px;text-align:center;">🏠</span>
+                        <span data-translate="dashboard">Home</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="active-route">
+                    <a href="#active-route">
+                        <span style="width:20px;text-align:center;">🛣️</span>
+                        <span data-translate="active-route">Active Route</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="view-map">
+                    <a href="#view-map">
+                        <span style="width:20px;text-align:center;">🗺️</span>
+                        <span data-translate="shuttle-map">View Map</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="completed-trips">
+                    <a href="#completed-trips">
+                        <span style="width:20px;text-align:center;">📈</span>
+                        <span data-translate="completed-trips">Completed Trips</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="notifications">
+                    <a href="#notifications">
+                        <span style="width:20px;text-align:center;">🔔</span>
+                        <span data-translate="notifications">Notifications</span>
+                        <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="support">
+                    <a href="#support">
+                        <span style="width:20px;text-align:center;">🎆</span>
+                        <span data-translate="support">Support</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="profile">
+                    <a href="#profile">
+                        <span style="width:20px;text-align:center;">👤</span>
+                        <span data-translate="profile">Profile</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <img src="https://ui-avatars.com/api/?name=Driver&background=ff6b35&color=fff" alt="User">
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Driver User</div>
+                    <div class="user-role">Driver</div>
+                </div>
+            </div>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span data-translate="logout">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-content">
+                <div class="welcome-message">
+                    <h1 data-translate="welcome-back">Welcome back, <span id="driverName">Driver</span>! 👋</h1>
+                    <p>Your personal driver dashboard</p>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="todayTripsCount">0</span>
+                        <span class="stat-label">Today's Trips</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="passengersCount">0</span>
+                        <span class="stat-label">Passengers</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-main" id="homeSection">
+
+            <!-- Quick Actions Section -->
+            <section class="quick-actions-section">
+                <h2 class="section-title" data-translate="quick-actions">Quick Actions</h2>
+                <div class="action-cards">
+                    <div class="action-card primary" id="startRouteCard">
+                        <div class="action-icon">
+                            <span style="font-size:2rem;">🎯</span>
+                        </div>
+                        <h3 data-translate="start-route">Start Route</h3>
+                        <p>Begin ETA tracking for students</p>
+                    </div>
+                    
+                    <div class="action-card success" id="etaStatusCard">
+                        <div class="action-icon">
+                            <span style="font-size:2rem;">⏱️</span>
+                        </div>
+                        <h3 data-translate="eta-status">ETA Status</h3>
+                        <p>View arrival times to stops</p>
+                    </div>
+                    
+                    <div class="action-card warning" id="stopRouteCard">
+                        <div class="action-icon">
+                            <span style="font-size:2rem;">⏹️</span>
+                        </div>
+                        <h3 data-translate="stop-route">Stop Route</h3>
+                        <p>End route and ETA tracking</p>
+                    </div>
+                    
+                    <div class="action-card danger">
+                        <div class="action-icon">
+                            <span style="font-size:2rem;">⚠️</span>
+                        </div>
+                        <h3 data-translate="emergency-alert">Emergency Alert</h3>
+                        <p data-translate="send-emergency">Send emergency notification</p>
+                    </div>
+                </div>
+                
+                <!-- ETA Status Display -->
+                <div class="eta-status-panel" id="etaStatusPanel" style="display: none;">
+                    <h3>🎯 Route ETA Status</h3>
+                    <div class="eta-stops" id="etaStopsList">
+                        <div class="eta-loading">Click "ETA Status" to view arrival times</div>
+                    </div>
+                </div>
+                
+                <!-- Live Notifications -->
+                <div class="live-notifications" id="liveNotifications">
+                    <h3>📢 Live Notifications</h3>
+                    <div class="notification-list" id="notificationList">
+                        <div class="no-notifications">No recent notifications</div>
+                    </div>
+                </div>
+            </section>
+            
+            <style>
+                .eta-status-panel {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 20px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                
+                .eta-status-panel h3 {
+                    margin: 0 0 15px 0;
+                    color: #ff6b35;
+                    font-size: 18px;
+                }
+                
+                .eta-stop {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 12px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    margin-bottom: 8px;
+                }
+                
+                .stop-info {
+                    flex: 1;
+                }
+                
+                .stop-name {
+                    font-weight: 600;
+                    color: #333;
+                    margin-bottom: 2px;
+                }
+                
+                .stop-details {
+                    font-size: 12px;
+                    color: #666;
+                }
+                
+                .eta-time {
+                    text-align: center;
+                    min-width: 60px;
+                }
+                
+                .eta-minutes {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #ff6b35;
+                }
+                
+                .eta-label {
+                    font-size: 12px;
+                    color: #666;
+                }
+                
+                .live-notifications {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 20px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                
+                .live-notifications h3 {
+                    margin: 0 0 15px 0;
+                    color: #ff6b35;
+                    font-size: 18px;
+                }
+                
+                .live-notification {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px;
+                    background: #e8f5e8;
+                    border-left: 4px solid #4caf50;
+                    border-radius: 6px;
+                    margin-bottom: 8px;
+                }
+                
+                .notification-content {
+                    flex: 1;
+                    font-size: 14px;
+                    color: #333;
+                }
+                
+                .notification-time {
+                    font-size: 11px;
+                    color: #999;
+                }
+                
+                .no-notifications, .eta-loading {
+                    text-align: center;
+                    color: #666;
+                    font-style: italic;
+                    padding: 20px;
+                }
+                
+                .action-card.success {
+                    background: linear-gradient(135deg, #4caf50, #45a049);
+                }
+                
+                .action-card.success:hover {
+                    background: linear-gradient(135deg, #45a049, #3d8b40);
+                }
+            </style>
+        </main>
+
+        <!-- View Map Section -->
+        <main class="view-map-section" id="viewMapSection" style="display: none;">
+            <div class="section-header">
+                <h2>🗺️ Campus Map</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            
+            <div class="map-content">
+                <!-- Real OpenStreetMap Container -->
+                <div id="driverMap" style="height: 500px; width: 100%; border-radius: 12px;"></div>
+            </div>
+        </main>
+
+        <!-- Start Trip Section -->
+        <main class="start-trip-section" id="startTripSection" style="display: none;">
+            <div class="section-header">
+                <h2>🗺️ Route Map</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            <div class="map-content">
+                <div id="startTripMap" style="height: 600px; width: 100%; border-radius: 12px;"></div>
+            </div>
+        </main>
+
+        <!-- Active Route Section -->
+        <main class="active-route-section" id="activeRouteSection" style="display: none;">
+            <div class="section-header">
+                <h2>🗺️ Active Route</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            <div class="active-route-content">
+                <div id="activeRouteMap" style="height: 500px; display: none;"></div>
+                <div class="pickup-points">
+                    <h3>Pickup/Drop-off Points</h3>
+                    <ul id="pickupList"></ul>
+                </div>
+            </div>
+        </main>
+
+        <!-- Completed Trips Section -->
+        <main class="completed-trips-section" id="completedTripsSection" style="display: none;">
+            <div class="section-header">
+                <h2>📊 Completed Trips</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            <div class="completed-trips-content">
+                <div class="trips-filters">
+                    <input type="date" id="filterDate">
+                    <select id="filterRoute">
+                        <option value="all">All Routes</option>
+                    </select>
+                    <button class="btn-secondary" id="applyFilterBtn">Apply</button>
+                </div>
+                <div class="trips-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Route</th>
+                                <th>Passengers</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="completedTripsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Notifications Section -->
+        <main class="notifications-section" id="notificationsSection" style="display: none;">
+            <div class="section-header">
+                <h2>🔔 Notifications</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            <div class="notifications-content">
+                <div class="notifications-list" id="notificationsList"></div>
+            </div>
+        </main>
+
+        <!-- Support Section -->
+        <main class="support-section" id="supportSection" style="display: none;">
+            <div class="section-header">
+                <h2>🆘 Support</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            <div class="support-content">
+                <div class="faq-section">
+                    <h3>Frequently Asked Questions</h3>
+                    <div class="faq-item">
+                        <h4>How do I start a trip?</h4>
+                        <p>Click "Start Trip" from the sidebar, select your route, and click "Begin Trip".</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>Location tracking not working?</h4>
+                        <p>Ensure location permissions are enabled in your browser settings.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>How do I report an issue?</h4>
+                        <p>Contact support at: support@ucc.edu.gh or call +233-XXX-XXXX</p>
+                    </div>
+                </div>
+                <div class="contact-info">
+                    <h3>Contact Support</h3>
+                    <p><strong>Email:</strong> support@ucc.edu.gh</p>
+                    <p><strong>Phone:</strong> +233-XXX-XXXX</p>
+                    <p><strong>Hours:</strong> 24/7</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Profile Section -->
+        <main class="profile-section" id="profileSection" style="display: none;">
+            <div class="section-header">
+                <h2>👤 Profile</h2>
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+            <div class="profile-content">
+                <!-- Driver Profile Summary -->
+                <section class="profile-summary-section">
+                    <h2 class="section-title">Driver Profile</h2>
+                    <div class="profile-summary-card">
+                        <div class="profile-avatar">
+                            <img src="https://ui-avatars.com/api/?name=Driver&background=ff6b35&color=fff" alt="Driver">
+                        </div>
+                        <div class="profile-info">
+                            <h3 id="profileName">Loading...</h3>
+                            <p><strong>ID:</strong> <span id="profileId">--</span></p>
+                            <p><strong>License:</strong> <span id="profileLicense">--</span></p>
+                            <p><strong>Assigned Shuttle:</strong> <span id="profileShuttle">--</span></p>
+                            <p><strong>Current Route:</strong> <span id="profileRoute">--</span></p>
+                        </div>
+                        <div class="trip-status">
+                            <h4>Current Trip Status</h4>
+                            <div class="status-badge" id="tripStatusBadge">Idle</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <div class="profile-form">
+                    <h3>Driver Details</h3>
+                    <form id="profileForm">
+                        <label>Name: <input type="text" id="editName"></label>
+                        <label>Phone: <input type="tel" id="editPhone"></label>
+                        <label>License: <input type="text" id="editLicense"></label>
+                        <button type="submit" class="btn-primary">Update Profile</button>
+                    </form>
+                </div>
+                <div class="password-form">
+                    <h3>Change Password</h3>
+                    <form id="passwordForm">
+                        <label>Current Password: <input type="password" id="currentPassword"></label>
+                        <label>New Password: <input type="password" id="newPassword"></label>
+                        <label>Confirm Password: <input type="password" id="confirmPassword"></label>
+                        <button type="submit" class="btn-primary">Change Password</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Inline minimal scripts to avoid CSP issues
+        console.log('Driver dashboard loading...');
+    </script>
+    <script src="../js/role-protection.js"></script>
+    <script src="../js/driver-dashboard-new.js"></script>
+    
+
+</body>
+</html>

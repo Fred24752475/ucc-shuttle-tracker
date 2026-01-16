@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Student Dashboard - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../css/student-dashboard.css">
+    <link rel="stylesheet" href="../css/student-dashboard-features.css">
+    <link rel="stylesheet" href="../css/student-dashboard-extended.css">
+    <link rel="stylesheet" href="../css/ai-assistant-simple.css">
+    <link rel="stylesheet" href="../css/messaging-system.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/../css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Leaflet CSS and JS - Optimized loading -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async></script>
+    <script>
+        // Optimized Leaflet loader - single attempt with immediate fallback
+        window.leafletLoaded = false;
+        window.leafletLoadPromise = new Promise((resolve, reject) => {
+            if (typeof L !== 'undefined') {
+                window.leafletLoaded = true;
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.onload = () => {
+                window.leafletLoaded = true;
+                console.log('✅ Leaflet loaded successfully');
+                resolve();
+            };
+            script.onerror = () => {
+                console.error('❌ Leaflet failed to load');
+                reject(new Error('Map library unavailable'));
+            };
+            document.head.appendChild(script);
+        });
+    </script>
+</head>
+
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-bus"></i>
+                <span>UCC Shuttle</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item active" data-section="dashboard">
+                    <a href="#dashboard">
+                        <span style="width:20px;text-align:center;">🏠</span>
+                        <span data-translate="dashboard">My Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="rides">
+                    <a href="#rides">
+                        <span style="width:20px;text-align:center;">🚗</span>
+                        <span data-translate="my-rides">My Rides</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="map">
+                    <a href="#map">
+                        <span style="width:20px;text-align:center;">🗺️</span>
+                        <span data-translate="shuttle-map">Shuttle Map</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="history">
+                    <a href="#history">
+                        <span style="width:20px;text-align:center;">📊</span>
+                        <span data-translate="trip-history">Trip History</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="ai-assistant">
+                    <a href="#ai-assistant">
+                        <span style="width:20px;text-align:center;">🤖</span>
+                        <span data-translate="ai-assistant">AI Assistant</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="messages">
+                    <a href="#messages">
+                        <span style="width:20px;text-align:center;">💬</span>
+                        <span data-translate="messages">Messages</span>
+                        <span class="notification-badge" id="messageBadge" style="display: none;">0</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-section="help">
+                    <a href="#help">
+                        <span style="width:20px;text-align:center;">❓</span>
+                        <span data-translate="help">Help</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <img src="https://ui-avatars.com/api/?name=Student&background=1565c0&color=fff" alt="User">
+                </div>
+                <div class="user-details">
+
+
+                    <div class="user-name" id="userName">Student User</div>
+                    <div class="user-role">Student</div>
+                </div>
+            </div>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span data-translate="logout">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-content">
+                <div class="welcome-message">
+                    <h1 data-translate="welcome-back">Welcome back, <span id="studentName">Student</span>! 👋</h1>
+                    <p>Your personal shuttle tracking dashboard</p>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="activeShuttlesCount">0</span>
+                        <span class="stat-label">Active Shuttles</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="todayTripsCount">0</span>
+                        <span class="stat-label">Today's Trips</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-main" id="dashboardMain">
+
+            <!-- Quick Actions Section -->
+            <section class="quick-actions-section">
+                <h2 class="section-title" data-translate="quick-actions">Quick Actions</h2>
+                <div class="action-cards">
+                    <div class="action-card primary" onclick="handleRequestRideClick()">
+                        <div class="action-icon">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <h3 data-translate="request-ride">Request Ride</h3>
+                        <p data-translate="book-shuttle">Book a shuttle to your destination</p>
+                    </div>
+
+                    <div class="action-card info" onclick="handleTrackShuttleClick()">
+                        <div class="action-icon">
+                            <i class="fas fa-map-pin"></i>
+                        </div>
+                        <h3 data-translate="track-shuttle">Track Shuttle</h3>
+                        <p data-translate="see-real-time">See real-time shuttle locations</p>
+                    </div>
+                    
+                    <div class="action-card success" onclick="handleSetPickupLocation()">
+                        <div class="action-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <h3 data-translate="set-pickup">Set Pickup Location</h3>
+                        <p data-translate="get-eta-alerts">Get ETA alerts when shuttles are near</p>
+                    </div>
+
+                    <div class="action-card warning" onclick="handleEmergencyClick()">
+                        <div class="action-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 data-translate="emergency-alert">Emergency Alert</h3>
+                        <p data-translate="send-emergency">Send emergency notification</p>
+                    </div>
+                </div>
+                
+                <!-- ETA Alerts Panel -->
+                <div class="eta-alerts-panel" id="etaAlertsPanel" style="display: none;">
+                    <h3>🔔 ETA Notifications</h3>
+                    <div class="current-pickup-location" id="currentPickupLocation">
+                        <div class="no-location">No pickup location set. Click "Set Pickup Location" to get ETA alerts.</div>
+                    </div>
+                    <div class="recent-eta-alerts" id="recentETAAlerts">
+                        <div class="no-alerts">No recent ETA alerts</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Widgets Grid -->
+            <div class="widgets-grid">
+
+                <!-- Shuttle Availability Widget -->
+                <div class="widget-card">
+                    <div class="widget-header">
+                        <div class="widget-icon shuttle-icon">
+                            <i class="fas fa-bus"></i>
+                        </div>
+                        <h3 data-translate="shuttle-availability">Shuttle Availability</h3>
+                        <div class="widget-status">
+                            <span class="status-dot active"></span>
+                            <span class="status-text">Live</span>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="shuttle-list" id="shuttleList">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <button class="widget-btn" onclick="handleShuttleAvailabilityClick()">View All Shuttles
+                            →</button>
+                    </div>
+                </div>
+
+
+                <!-- Current Trip Widget -->
+                <div class="widget-card">
+                    <div class="widget-header">
+                        <div class="widget-icon trip-icon">
+                            <i class="fas fa-route"></i>
+                        </div>
+                        <h3 data-translate="current-trip">Current Trip</h3>
+                        <div class="widget-status">
+                            <span class="status-dot ready"></span>
+                            <span class="status-text">Ready</span>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="current-trip-info" id="currentTripInfo">
+                            <div class="trip-status-item">
+                                <span class="trip-label">Status:</span>
+                                <span class="trip-value" id="tripStatusValue" data-translate="no-active-trip">No active trip</span>
+                            </div>
+                            <div class="trip-status-item">
+                                <span class="trip-label">Driver:</span>
+                                <span class="trip-value" id="tripDriverName">--</span>
+                            </div>
+                            <div class="trip-status-item">
+                                <span class="trip-label">Shuttle:</span>
+                                <span class="trip-value" id="tripShuttleName">--</span>
+                            </div>
+                            <div class="trip-status-item">
+                                <span class="trip-label">Route:</span>
+                                <span class="trip-value" id="tripRoute">--</span>
+                            </div>
+                            <div class="trip-status-item">
+                                <span class="trip-label">ETA:</span>
+                                <span class="trip-value" id="tripETA">--</span>
+                            </div>
+                        </div>
+                        <div class="trip-actions" id="tripActions" style="display: none;">
+                            <button class="trip-action-btn cancel" onclick="cancelCurrentTrip()">
+                                <i class="fas fa-times"></i> Cancel Trip
+                            </button>
+                            <button class="trip-action-btn reschedule" onclick="rescheduleCurrentTrip()">
+                                <i class="fas fa-clock"></i> Reschedule
+                            </button>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <button class="widget-btn" onclick="handleCurrentTripClick()">Manage Trip →</button>
+                    </div>
+                </div>
+
+
+                <!-- Trip History Widget -->
+                <div class="widget-card">
+                    <div class="widget-header">
+                        <div class="widget-icon history-icon">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <h3>Trip History</h3>
+                        <div class="widget-status">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Updated</span>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="trip-summary">
+                            <div class="summary-item">
+                                <span class="summary-number" id="totalTrips">0</span>
+                                <span class="summary-label">Total Trips</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-number" id="weekTrips">0</span>
+                                <span class="summary-label">This Week</span>
+                            </div>
+                        </div>
+                        <div class="recent-trips" id="recentTrips">
+                            <p>Loading recent trips...</p>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <button class="widget-btn" onclick="handleTripHistoryClick()">View Full History →</button>
+                    </div>
+                </div>
+
+                <!-- Live Map Widget -->
+                <div class="widget-card map-widget" onclick="handleMapClick()">
+                    <div class="widget-header">
+                        <div class="widget-icon map-icon">
+                            <i class="fas fa-map"></i>
+                        </div>
+                        <h3>Live Shuttle Map</h3>
+                        <div class="widget-status">
+                            <span class="status-dot active"></span>
+                            <span class="status-text">Real-time</span>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="map-container" id="liveMap">
+                            <div class="simple-map-placeholder">
+                                <i class="fas fa-map-marked-alt"></i>
+                                <h4>Live Map</h4>
+                                <p>Click to open interactive map view</p>
+                                <p>Showing shuttles in real-time</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="widget-footer">
+                        <button class="widget-btn">Open Full Map →</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- Map Section -->
+        <main class="map-section" id="mapSection" style="display: none;">
+            <div class="section-header">
+                <h2>🗺 Live Shuttle Map</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="map-content">
+                <div id="shuttleMap"></div>
+            </div>
+        </main>
+
+        <!-- History Section -->
+        <main class="history-section" id="historySection" style="display: none;">
+            <div class="section-header">
+                <h2>📊 Trip History</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="history-content">
+                <div class="history-filters">
+                    <select id="historyFilter">
+                        <option value="all">All Trips</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="last30">Last 30 Days</option>
+                    </select>
+                    <button class="filter-btn" onclick="applyHistoryFilter()">Apply Filter</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- AI Assistant Section -->
+        <main class="ai-assistant-section" id="aiAssistantSection" style="display: none;">
+            <div class="section-header">
+                <h2>🤖 AI Assistant</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="ai-content">
+                <div class="ai-chat-container">
+                    <!-- AI Header -->
+                    <div class="ai-header">
+                        <div class="ai-avatar-large">
+                            <div class="ai-avatar-circle">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="ai-status-indicator"></div>
+                        </div>
+                        <div class="ai-info">
+                            <h3 data-translate="ai-title">UCC Smart Assistant</h3>
+                            <p data-translate="ai-subtitle">I'm here to help with shuttles, routes, and campus info</p>
+                            <div class="ai-capabilities">
+                                <span class="capability-tag">🚌 Shuttle Tracking</span>
+                                <span class="capability-tag">📍 Route Planning</span>
+                                <span class="capability-tag">⏰ Schedules</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="ai-quick-actions">
+                        <button class="quick-action-btn" onclick="sendQuickMessage('Where is the nearest shuttle?')">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span data-translate="find-shuttle">Find Shuttle</span>
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('Book a ride to library')">
+                            <i class="fas fa-book"></i>
+                            <span data-translate="book-ride">Book Ride</span>
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('What are the shuttle schedules?')">
+                            <i class="fas fa-clock"></i>
+                            <span data-translate="schedules">Schedules</span>
+                        </button>
+                        <button class="quick-action-btn" onclick="sendQuickMessage('Emergency help needed')">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span data-translate="emergency">Emergency</span>
+                        </button>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div class="ai-messages" id="aiMessages">
+                        <!-- Welcome message will be added dynamically by the realistic AI -->
+                    </div>
+
+                    <!-- Typing Indicator -->
+                    <div class="ai-typing-indicator" id="aiTypingIndicator" style="display: none;">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="typing-bubble">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="ai-input-container">
+                        <div class="input-wrapper">
+                            <input type="text" id="aiInput" data-translate="type-message" placeholder="Ask me anything about shuttles, routes, or campus info..." />
+                            <button id="aiSendBtn" class="ai-send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="ai-suggestions" id="aiSuggestions" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- My Rides Section -->
+        <main class="rides-section" id="ridesSection" style="display: none;">
+            <div class="section-header">
+                <h2>🚗 My Rides</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="rides-content">
+                <div class="ride-tabs">
+                    <button class="tab-btn active" onclick="switchRideTab('upcoming')">Upcoming Rides</button>
+                    <button class="tab-btn" onclick="switchRideTab('history')">Ride History</button>
+                    <button class="tab-btn" onclick="switchRideTab('cancelled')">Cancelled</button>
+                </div>
+                <div class="rides-list" id="ridesList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Messages Section -->
+        <main class="messages-section" id="messagesSection" style="display: none;">
+            <div class="section-header">
+                <h2>💬 Messages</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="messages-content">
+                <div class="chat-tabs">
+                    <button class="chat-tab-btn active" data-tab="all">All Users</button>
+                    <button class="chat-tab-btn" data-tab="students">Students</button>
+                    <button class="chat-tab-btn" data-tab="drivers">Drivers</button>
+                    <button class="chat-tab-btn" data-tab="support">Support Team</button>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-sidebar">
+                        <div class="chat-list" id="chatList">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header" id="chatHeader">
+                            <div class="no-chat-selected">
+                                <i class="fas fa-comments"></i>
+                                <p>Select a conversation to start messaging</p>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chatMessages" style="display: none;">
+                            <!-- Messages will be rendered here -->
+                        </div>
+                        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                            <span>Someone is typing</span>
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                        <div class="chat-input" id="chatInput" style="display: none;">
+                            <div class="input-wrapper">
+                                <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+                                <div class="input-actions">
+                                    <button class="input-btn" id="emojiBtn" title="Add Emoji">
+                                        <i class="fas fa-smile"></i>
+                                    </button>
+                                    <button class="input-btn" id="attachBtn" title="Attach File">
+                                        <i class="fas fa-paperclip"></i>
+                                    </button>
+                                    <input type="file" id="fileInput" style="display: none;" accept="image/*,document/*">
+                                </div>
+                            </div>
+                            <button class="send-btn" id="sendMessageBtn" title="Send Message">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- Help Section -->
+        <main class="help-section" id="helpSection" style="display: none;">
+            <div class="section-header">
+                <h2>❓ Help & Support</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </button>
+            </div>
+            <div class="help-content">
+                <div class="help-tabs">
+                    <button class="tab-btn active" onclick="switchHelpTab('faq')">FAQs</button>
+                    <button class="tab-btn" onclick="switchHelpTab('contact')">Contact Support</button>
+                    <button class="tab-btn" onclick="switchHelpTab('emergency')">Emergency</button>
+                </div>
+                <div class="help-body" id="helpBody">
+                    <div class="faq-section" id="faqSection">
+                        <div class="faq-list">
+                            <div class="faq-item">
+                                <h4>How do I book a shuttle?</h4>
+                                <p>Click the "Request Ride" button on your dashboard, select your pickup and
+                                    destination, then submit your request.</p>
+                            </div>
+                            <div class="faq-item">
+                                <h4>How can I track my shuttle?</h4>
+                                <p>Use the "Track Shuttle" button or open the live map to see real-time shuttle
+                                    locations.</p>
+                            </div>
+                            <div class="faq-item">
+                                <h4>What should I do in an emergency?</h4>
+                                <p>Use the Emergency Alert button or call campus security at the emergency number
+                                    provided.</p>
+                            </div>
+                            <div class="faq-item">
+                                <h4>How do I cancel a ride?</h4>
+                                <p>Go to "My Rides" and click the cancel button on your upcoming ride.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Map CSS -->
+    <style>
+        /* Fullscreen map styles */
+        .map-section.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999;
+            background: white;
+        }
+
+        .map-section.fullscreen .section-header {
+            background: #1565c0;
+            color: white;
+            padding: 15px 20px;
+        }
+
+        .map-section.fullscreen #shuttleMap {
+            height: calc(100vh - 70px) !important;
+        }
+
+        /* Shuttle popup styles */
+        .shuttle-popup h4 {
+            margin: 0 0 8px 0;
+            color: #1565c0;
+            font-size: 16px;
+        }
+
+        .shuttle-popup p {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        .shuttle-popup .status-available {
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .shuttle-popup .status-busy {
+            color: #ff9800;
+            font-weight: 600;
+        }
+
+        .shuttle-popup .status-offline {
+            color: #9e9e9e;
+            font-weight: 600;
+        }
+
+        /* Map widget enhancement */
+        .map-widget {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .map-widget:hover {
+            transform: translateY(-2px);
+        }
+
+        .view-full-map-btn {
+            background: #1565c0;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 8px auto 0;
+        }
+
+        .view-full-map-btn:hover {
+            background: #0d47a1;
+        }
+
+        /* ========== STUDENT LOCATION TRACKER STYLES ========== */
+
+        /* Blinking location marker */
+        .student-location-marker {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+
+        .marker-pulse {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(33, 150, 243, 0.4);
+            animation: pulse-animation 2s ease-out infinite;
+        }
+
+        .marker-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            animation: blink-animation 1.5s ease-in-out infinite;
+            border: 3px solid white;
+        }
+
+        @keyframes pulse-animation {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes blink-animation {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(33, 150, 243, 0.7);
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 8px rgba(33, 150, 243, 0);
+            }
+        }
+
+        /* Student popup */
+        .student-popup h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+            font-size: 16px;
+        }
+
+        .student-popup p {
+            margin: 5px 0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .student-popup i {
+            margin-right: 6px;
+            color: #2196f3;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #4caf50 !important;
+            font-weight: 600;
+            margin-top: 8px !important;
+        }
+
+        .live-indicator i {
+            font-size: 8px;
+            animation: blink-dot 1s ease-in-out infinite;
+            color: #4caf50 !important;
+        }
+
+        @keyframes blink-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* Location permission prompt */
+        .location-permission-prompt {
+            padding: 40px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #f5f5f5, #ffffff);
+            border-radius: 12px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .permission-icon {
+            color: #2196f3;
+            margin-bottom: 20px;
+            animation: float-animation 3s ease-in-out infinite;
+        }
+
+        @keyframes float-animation {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .location-permission-prompt h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
+
+        .location-permission-prompt p {
+            color: #666;
+            margin-bottom: 24px;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+
+        .enable-location-btn {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .enable-location-btn:hover {
+            background: linear-gradient(135deg, #1976d2, #1565c0);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(33, 150, 243, 0.5);
+        }
+
+        .enable-location-btn:active {
+            transform: translateY(0);
+        }
+
+        .permission-note {
+            margin-top: 20px !important;
+            font-size: 12px !important;
+            color: #999 !important;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .permission-note i {
+            color: #4caf50;
+        }
+
+        /* Location error */
+        .location-error {
+            padding: 40px 20px;
+            text-align: center;
+            color: #f44336;
+        }
+
+        .location-error i {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .location-error p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Make sure map container has proper dimensions */
+        #liveMap {
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+    </style>
+
+
+    <!-- JavaScript -->
+    <script src="../js/role-protection.js"></script>
+    <script src="../js/student-dashboard-events.js"></script>
+    <script src="../js/student-dashboard-data.js"></script>
+    <script src="../js/student-map-simple.js"></script>
+    <script src="../js/messaging-system.js"></script>
+    <script src="../js/messaging.js"></script>
+    <script src="../js/dark-mode.js"></script>
+    <script src="../js/language-switcher.js"></script>
+    <script src="../js/ai-assistant-multilingual.js"></script>
+    <script src="../js/security.js"></script>
+    <script src="../js/localization.js"></script>
+    <script src="../js/student-location-tracker.js"></script>
+    <script src="../js/student-eta-system.js"></script>
+
+    <!-- REAL OPENSTREETMAP INITIALIZATION -->
+    <script>
+        // Global variable to track real map
+        window.realMapInitialized = false;
+        window.leafletLoadAttempts = 0;
+        const MAX_LEAFLET_LOAD_ATTEMPTS = 10;
+
+        // Simplified Leaflet availability check
+        function waitForLeaflet(callback) {
+            if (window.leafletLoaded || typeof L !== 'undefined') {
+                console.log('✅ Leaflet is available');
+                callback();
+            } else {
+                window.leafletLoadPromise
+                    .then(() => callback())
+                    .catch(() => showMapError());
+            }
+        }
+
+function showMapError() {
+            console.error('🗺️ Showing map error state');
+            const mapContainer = document.getElementById('shuttleMap');
+            if (mapContainer) {
+                mapContainer.innerHTML = `
+                    <div style="
+                        height: 500px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #fee;
+                        border: 2px solid #fcc;
+                        border-radius: 8px;
+                        color: #c33;
+                        flex-direction: column;
+                    ">
+                        <div style="font-size: 48px; margin-bottom: 20px;">🗺️</div>
+                        <h3>Map Loading Failed</h3>
+                        <p>Please check your internet connection and try again.</p>
+                        <button onclick="window.initializeSimpleMap()" style="
+                            background: #1565c0;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            margin: 5px;
+                        ">🗺️ Try Map Again</button>
+                        <button onclick="window.location.reload()" style="
+                            background: #666;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 12px;
+                            margin: 5px;
+                        ">🔄 Reload Page</button>
+                    </div>
+                `;
+            }
+        }
+        }
+            }
+        }
+
+        // Initialize real OpenStreetMap when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🗺️ Setting up real OpenStreetMap for student dashboard...');
+
+            // Override the simple map function to use real OpenStreetMap with fallback
+            window.initializeSimpleMap = function () {
+                console.log('🗺️ Loading REAL OpenStreetMap...');
+                
+                // Prevent multiple initializations
+                if (window.realStudentMap) {
+                    console.log('✅ Map already initialized, just showing section');
+                    // Force map to redraw if it was hidden
+                    setTimeout(() => {
+                        if (window.realStudentMap) {
+                            window.realStudentMap.invalidateSize();
+                        }
+                    }, 100);
+                    return;
+                }
+
+                const mapContainer = document.getElementById('shuttleMap');
+                if (!mapContainer) {
+                    console.error('❌ Map container not found');
+                    return;
+                }
+
+                // Show loading state
+                const startTime = Date.now();
+                mapContainer.innerHTML = `
+                    <div id="mapLoadingState" style="
+                        height: calc(100vh - 200px);
+                        min-height: 600px;
+                        width: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                        color: #6c757d;
+                        position: relative;
+                    ">
+                        <div style="text-align: center;">
+                            <div class="map-spinner" style="
+                                width: 40px;
+                                height: 40px;
+                                border: 4px solid #e3e3e3;
+                                border-top: 4px solid #1565c0;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                                margin: 0 auto 15px;
+                            "></div>
+                            <div style="font-size: 24px; margin-bottom: 10px;">🗺️</div>
+                            <p id="loadingText">Loading interactive map...</p>
+                            <p id="loadingTime" style="font-size: 12px; color: #999; margin-top: 5px;">0s</p>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                `;
+
+                // Update loading time
+                const timeInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const timeElement = document.getElementById('loadingTime');
+                    if (timeElement) {
+                        timeElement.textContent = `${elapsed}s`;
+                        if (elapsed > 3) {
+                            document.getElementById('loadingText').textContent = 'Taking longer than expected...';
+                        }
+                        if (elapsed > 8) {
+                            document.getElementById('loadingText').textContent = 'Loading fallback map...';
+                            // Load fallback after 8 seconds
+                            loadFallbackMap();
+                            clearInterval(timeInterval);
+                        }
+                    }
+                }, 1000);
+
+                // Fallback map function
+                function loadFallbackMap() {
+                    console.log('🗺️ Loading fallback map...');
+                    mapContainer.innerHTML = `
+                        <div style="
+                            height: 500px;
+                            width: 100%;
+                            border-radius: 8px;
+                            background: linear-gradient(135deg, #e8f4f8 0%, #d1e7dd 100%);
+                            position: relative;
+                            overflow: hidden;
+                            border: 2px solid #1565c0;
+                        ">
+                            <div style="position: absolute; top: 10px; left: 10px; background: white; padding: 8px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000;">
+                                <h4 style="margin: 0; color: #1565c0;">🇬🇭 Ghana Shuttle Map</h4>
+                                <p style="margin: 4px 0; font-size: 12px; color: #666;">UCC Campus & Surrounding Areas</p>
+                            </div>
+                            <div style="position: absolute; top: 10px; left: 10px; background: white; padding: 8px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000;">
+                                <h4 style="margin: 0; color: #1565c0;">🗺️ UCC Campus Map</h4>
+                                <p style="margin: 4px 0; font-size: 12px; color: #666;">Interactive View</p>
+                            </div>
+                            
+                            <!-- Ghana Locations -->
+                            <div style="position: absolute; top: 180px; left: 150px; background: #1565c0; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🎓 UCC Library - Click to book shuttle')">
+                                📚
+                            </div>
+                            <div style="position: absolute; top: 150px; left: 300px; background: #27ae60; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🔬 UCC Science Block - Click to book shuttle')">
+                                🔬
+                            </div>
+                            <div style="position: absolute; top: 250px; left: 200px; background: #f39c12; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🏠 UCC Hostel - Click to book shuttle')">
+                                🏠
+                            </div>
+                            <div style="position: absolute; top: 120px; left: 380px; background: #e74c3c; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🚪 UCC Main Gate - Click to book shuttle')">
+                                🚪
+                            </div>
+                            <div style="position: absolute; top: 200px; left: 450px; background: #9b59b6; color: white; padding: 8px; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🏙️ Cape Town - Click to book shuttle')">
+                                🏙️
+                            </div>
+                            
+                            <!-- Ghana Shuttle Markers -->
+                            <div style="position: absolute; top: 190px; left: 180px; background: #27ae60; color: white; padding: 4px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; animation: pulse 2s infinite;" onclick="alert('🚌 UCC Library Shuttle - Available! ETA: 3 mins')">
+                                🚌
+                            </div>
+                            <div style="position: absolute; top: 160px; left: 330px; background: #f39c12; color: white; padding: 4px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; animation: pulse 2s infinite;" onclick="alert('🚌 UCC Science Shuttle - In Use! ETA: 7 mins')">
+                                🚌
+                            </div>
+                            <div style="position: absolute; top: 260px; left: 230px; background: #27ae60; color: white; padding: 4px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; animation: pulse 2s infinite;" onclick="alert('🚌 UCC Hostel Shuttle - Available! ETA: 5 mins')">
+                                🚌
+                            </div>
+                            <div style="position: absolute; top: 130px; left: 410px; background: #9b59b6; color: white; padding: 4px; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer; animation: pulse 2s infinite;" onclick="alert('🚌 Cape Town Shuttle - Available! ETA: 10 mins')">
+                                🚌
+                            </div>
+                            
+                            <!-- User Location -->
+                            <div style="position: absolute; top: 250px; left: 250px; background: #2196f3; color: white; padding: 4px; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); animation: blink 1s infinite;">
+                                👤
+                            </div>
+                            
+                            <!-- Legend -->
+                            <div style="position: absolute; bottom: 10px; right: 10px; background: white; padding: 10px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 12px;">
+                                <div style="margin-bottom: 5px;"><strong>🗺️ Legend:</strong></div>
+                                <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                                    <div style="background: #27ae60; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px;"></div>
+                                    Available Shuttle
+                                </div>
+                                <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                                    <div style="background: #f39c12; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px;"></div>
+                                    In Use
+                                </div>
+                                <div style="display: flex; align-items: center;">
+                                    <div style="background: #2196f3; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px;"></div>
+                                    Your Location
+                                </div>
+                            </div>
+                            
+                            <style>
+                                @keyframes pulse {
+                                    0% { transform: scale(1); }
+                                    50% { transform: scale(1.1); }
+                                    100% { transform: scale(1); }
+                                }
+                                @keyframes blink {
+                                    0%, 50% { opacity: 1; }
+                                    51%, 100% { opacity: 0.3; }
+                                }
+                            </style>
+                        </div>
+                    `;
+                    console.log('✅ Fallback map loaded successfully');
+                }
+
+                // Try to load real map first
+                waitForLeaflet(() => {
+                    try {
+                        console.log('🗺️ Leaflet available, creating real map...');
+                        
+                        // Clear container and ensure proper dimensions
+                        mapContainer.innerHTML = '';
+                        mapContainer.style.cssText = `
+                            height: 500px !important;
+                            width: 100% !important;
+                            border-radius: 8px;
+                            position: relative;
+                            display: block;
+                            visibility: visible;
+                            background: #e8f4f8;
+                        `;
+                        
+                        clearInterval(timeInterval);
+
+                        // Initialize real OpenStreetMap with Ghana coordinates
+                        window.realStudentMap = L.map('shuttleMap', {
+                            center: [8.1, -1.2], // Better center for Ghana
+                            zoom: 7,
+                            zoomControl: true,
+                            worldCopyJump: true,
+                            preferCanvas: true
+                        });
+                        
+                        console.log('✅ Real map created successfully');
+
+                        // Add OpenStreetMap tiles with improved loading for Ghana
+                        const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors',
+                            maxZoom: 18,
+                            minZoom: 3,
+                            updateWhenIdle: false,
+                            updateWhenZooming: false,
+                            keepBuffer: 3,
+                            maxNativeZoom: 18,
+                            tileSize: 256,
+                            crossOrigin: true,
+                            detectRetina: false,
+                            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+                        }).addTo(window.realStudentMap);
+
+                        // Add backup tile layer if primary fails
+                        osmTiles.on('tileerror', function(e) {
+                            console.warn('⚠️ Primary tile failed, using backup...');
+                            // Try alternative tile server
+                            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '© OpenStreetMap contributors',
+                                maxZoom: 18,
+                                minZoom: 3
+                            }).addTo(window.realStudentMap);
+                        });
+
+                        // Set Ghana bounds to ensure complete visibility
+                        const ghanaBounds = [
+                            [4.7, -3.3], // Southwest corner of Ghana
+                            [11.0, 1.2]  // Northeast corner of Ghana
+                        ];
+                        
+                        // Fit map to Ghana bounds
+                        window.realStudentMap.fitBounds(ghanaBounds, { padding: [20, 20] });
+
+                        // Add shuttle markers in Ghana (UCC area)
+                        const shuttles = [
+                            { lat: 5.6037, lng: -0.1870, name: 'UCC Library Shuttle', status: 'Available', icon: '🚌' },
+                            { lat: 5.6100, lng: -0.1900, name: 'UCC Science Shuttle', status: 'In Use', icon: '🚌' },
+                            { lat: 5.5950, lng: -0.1700, name: 'UCC Hostel Shuttle', status: 'Available', icon: '🚌' },
+                            { lat: 5.6200, lng: -0.2000, name: 'UCC Main Gate Shuttle', status: 'Offline', icon: '🚌' },
+                            { lat: 5.6050, lng: -0.1850, name: 'Cape Town Shuttle', status: 'Available', icon: '🚌' },
+                            { lat: 5.5800, lng: -0.2100, name: 'Takoradi Shuttle', status: 'In Use', icon: '🚌' }
+                        ];
+
+                        shuttles.forEach(shuttle => {
+                            const color = shuttle.status === 'Available' ? '#27ae60' :
+                                shuttle.status === 'In Use' ? '#f39c12' : '#95a5a6';
+
+                            const customIcon = L.divIcon({
+                                html: `<div style="background: ${color}; color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);">${shuttle.icon}</div>`,
+                                iconSize: [35, 35],
+                                className: 'real-shuttle-marker'
+                            });
+
+                            const marker = L.marker([shuttle.lat, shuttle.lng], { icon: customIcon })
+                                .addTo(window.realStudentMap)
+                                .bindPopup(`
+                                    <div style="padding: 10px;">
+                                        <h4 style="margin: 0 0 8px 0; color: #1565c0;">${shuttle.name}</h4>
+                                        <p style="margin: 4px 0;">Status: <strong style="color: ${color}">${shuttle.status}</strong></p>
+                                        <p style="margin: 4px 0;">ETA: ${shuttle.status === 'Available' ? Math.floor(Math.random() * 10 + 3) : Math.floor(Math.random() * 15 + 5)} minutes</p>
+                                        <button onclick="alert('🎫 Booking ${shuttle.name}!')" style="background: #1565c0; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Book Now</button>
+                                    </div>
+                                `);
+
+                            // Add hover effect
+                            marker.on('mouseover', function () {
+                                this.openPopup();
+                            });
+                        });
+
+                        // Add user location marker
+                        if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                                (position) => {
+                                    const userIcon = L.divIcon({
+                                        html: '<div style="background: #2196f3; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">👤</div>',
+                                        iconSize: [25, 25],
+                                        className: 'user-location-marker'
+                                    });
+
+                                    L.marker([position.coords.latitude, position.coords.longitude], { icon: userIcon })
+                                        .addTo(window.realStudentMap)
+                                        .bindPopup('<b>You are here</b>')
+                                        .openPopup();
+                                },
+                                (error) => {
+                                    console.log('📍 Could not get user location');
+                                }
+                            );
+                        }
+
+// Force map to redraw after adding markers and ensure complete loading
+                        setTimeout(() => {
+                            if (window.realStudentMap) {
+                                window.realStudentMap.invalidateSize();
+                                
+                                // Ensure tiles are fully loaded
+                                window.realStudentMap.whenReady(() => {
+                                    console.log('✅ Real map fully loaded with Ghana and markers');
+                                    
+                                    // Add zoom controls for better navigation
+                                    L.control.scale({
+                                        position: 'bottomright',
+                                        metric: true,
+                                        imperial: false
+                                    }).addTo(window.realStudentMap);
+                                });
+                            }
+                        }, 500);
+
+                    } catch (error) {
+                        console.error('❌ Error during map initialization:', error);
+                        clearInterval(timeInterval);
+                        loadFallbackMap();
+                    }
+                }).catch((error) => {
+                    console.error('❌ Leaflet loading failed:', error);
+                    clearInterval(timeInterval);
+                    loadFallbackMap();
+                });
+            };
+        });
+            };
+        });
+    </script>
+
+
+
+    <!-- SIMPLE DIRECT NAVIGATION -->
+    <script>
+        // Simple navigation functions
+        function showMap() {
+            console.log('🗺️ SHOW MAP');
+            hideAllSections();
+            const mapSection = document.getElementById('mapSection');
+            if (mapSection) {
+                mapSection.style.display = 'block';
+                setTimeout(() => {
+                    initializeSimpleMap();
+                }, 200);
+            }
+        }
+
+        function showDashboard() {
+            console.log('🏠 SHOW DASHBOARD');
+            hideAllSections();
+            const dashSection = document.getElementById('dashboardSection');
+            if (dashSection) {
+                dashSection.style.display = 'block';
+            }
+        }
+
+        function showRides() {
+            console.log('🚗 SHOW RIDES');
+            hideAllSections();
+            const ridesSection = document.getElementById('ridesSection');
+            if (ridesSection) {
+                ridesSection.style.display = 'block';
+            }
+        }
+
+        function hideAllSections() {
+            const sections = document.querySelectorAll('[id$="Section"]');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+        }
+
+        function initializeSimpleMap() {
+            // Use the real OpenStreetMap implementation
+            if (window.uccMap) {
+                console.log('✅ Using real OpenStreetMap implementation');
+                // Refresh the map if it already exists
+                setTimeout(() => {
+                    if (window.uccMap.map) {
+                        window.uccMap.map.invalidateSize();
+                        window.uccMap.refreshShuttles();
+                    }
+                }, 200);
+            } else if (window.L) {
+                console.log('🗺️ Initializing basic OpenStreetMap...');
+                try {
+                    if (!window.simpleMap) {
+                        window.simpleMap = L.map('shuttleMap').setView([5.6037, -0.1870], 15);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors',
+                            maxZoom: 19
+                        }).addTo(window.simpleMap);
+
+                        // Add shuttle markers
+                        const shuttle1 = L.marker([5.6037, -0.1870]).addTo(window.simpleMap);
+                        shuttle1.bindPopup('🚌 Library Shuttle - Available');
+
+                        const shuttle2 = L.marker([5.6050, -0.1880]).addTo(window.simpleMap);
+                        shuttle2.bindPopup('🚌 Science Shuttle - In Use');
+
+                        const shuttle3 = L.marker([5.6040, -0.1860]).addTo(window.simpleMap);
+                        shuttle3.bindPopup('🚌 Hostel Shuttle - Available');
+
+                        console.log('✅ Basic OpenStreetMap loaded with shuttles');
+                    }
+                } catch (error) {
+                    console.error('❌ Map error:', error);
+                }
+            }
+        }
+    </script>
+
+    <!-- Add AI Assistant Functions -->
+    <script>
+        // Quick message function
+        function sendQuickMessage(message) {
+            const input = document.getElementById('aiInput');
+            if (input) {
+                input.value = message;
+                if (window.uccAIAssistant) {
+                    window.uccAIAssistant.handleUserMessage();
+                } else {
+                    // Fallback simple AI
+                    sendSimpleAI(message);
+                }
+            }
+        }
+
+        // Realistic AI is now handled by ai-assistant-realistic.js
+    </script>
+
+    <!-- Simple Dashboard Navigation (loaded after real map) -->
+    <script src="../js/dashboard-simple-working.js"></script>
+</body>
+
+</html>

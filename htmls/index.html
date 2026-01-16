@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>UCC Shuttle Tracker - Main Portal</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../js/database.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <style>
+        .main-portal {
+            background: var(--bg-gradient-hero);
+            min-height: 100vh;
+            position: relative;
+            padding: var(--spacing-lg);
+        }
+        
+        .portal-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .portal-title {
+            font-size: clamp(2.5rem, 6vw, 3.5rem);
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-stroke: 2px var(--accent-cyan);
+            text-stroke: 2px var(--accent-cyan);
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            display: inline-block;
+        }
+        
+        .portal-subtitle {
+            font-size: var(--text-lg);
+            color: var(--gray-600);
+            margin-bottom: var(--spacing-2xl);
+            animation: slideInRight 0.8s ease-out;
+        }
+        
+        .role-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+            animation: fadeInUp 1s ease-out 0.3s;
+        }
+        
+        .role-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px solid transparent;
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-2xl);
+            text-align: center;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left var(--transition-slow);
+        }
+        
+        .role-card:hover::before {
+            left: 100%;
+        }
+        
+        .role-icon {
+            font-size: clamp(3rem, 8vw, 4rem);
+            margin-bottom: var(--spacing-lg);
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-stroke: 2px var(--white);
+            text-stroke: 2px var(--white);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .role-title {
+            font-size: var(--text-xl);
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .role-description {
+            font-size: var(--text-base);
+            color: var(--gray-600);
+            margin-bottom: var(--spacing-lg);
+            line-height: var(--leading-relaxed);
+        }
+        
+        .role-features {
+            text-align: left;
+            font-size: var(--text-sm);
+            color: var(--gray-500);
+        }
+        
+        .feature-item {
+            margin-bottom: var(--spacing-sm);
+            padding-left: var(--spacing-md);
+            position: relative;
+        }
+        
+        .feature-item::before {
+            content: '✓';
+            color: var(--success-green);
+            font-weight: bold;
+            margin-right: var(--spacing-sm);
+            position: absolute;
+            left: 0;
+        }
+        
+        .student-role .role-card:hover {
+            border-color: var(--primary-blue);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .student-role .role-card:hover::before {
+            background: var(--gradient-primary);
+        }
+        
+        .driver-role .role-card:hover {
+            border-color: var(--driver-orange);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .driver-role .role-card:hover::before {
+            background: var(--gradient-driver);
+        }
+        
+        .admin-role .role-card:hover {
+            border-color: var(--admin-purple);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .admin-role .role-card:hover::before {
+            background: var(--gradient-admin);
+        }
+        
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin: var(--spacing-2xl) 0;
+            padding: var(--spacing-2xl);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            animation: slideInLeft 0.8s ease-out 0.3s;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: all var(--transition-normal);
+        }
+        
+        .stat-number {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--primary-blue);
+            display: block;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .stat-label {
+            font-size: var(--text-sm);
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        @media (max-width: 768px) {
+            .role-cards {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+            
+            .stats-section {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--spacing-md);
+                padding: var(--spacing-lg);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .portal-header {
+                margin-bottom: var(--spacing-xl);
+            }
+            
+            .role-cards {
+                gap: var(--spacing-md);
+            }
+            
+            .role-card {
+                padding: var(--spacing-lg);
+                min-height: 180px;
+            }
+            
+            .stats-section {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+                padding: var(--spacing-md);
+            }
+            
+            .portal-title {
+                font-size: var(--text-2xl);
+            }
+            
+            .role-title {
+                font-size: var(--text-lg);
+            }
+        }
+        
+        /* Loading State */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--primary-blue);
+            border-radius: var(--radius-full);
+            border-top-color: transparent;
+            animation: loading 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="main-portal">
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-header">
+            <h3 style="color: white; margin: 0;">🏠 Main Portal</h3>
+            <button class="hamburger-menu" onclick="toggleMobileMenu()">☰</button>
+        </div>
+        <ul class="mobile-nav-items">
+            <li><a href="../htmls/index.html" onclick="closeMobileMenu()">🏠 Main Portal</a></li>
+            <li><a href="../htmls/student-login.html" onclick="closeMobileMenu()">🎓 Student Portal</a></li>
+            <li><a href="../htmls/driver-login.html" onclick="closeMobileMenu()">🚗 Driver Portal</a></li>
+            <li><a href="../htmls/admin-login.html" onclick="closeMobileMenu()">⚙️ Admin Portal</a></li>
+            <li><a href="../htmls/password-reset.html" onclick="closeMobileMenu()">🔐 Reset Password</a></li>
+        </ul>
+    </nav>
+
+    <!-- Desktop Navigation -->
+    <nav class="desktop-nav" id="desktopNav">
+        <a href="../htmls/index.html">🏠 Main Portal</a>
+        <a href="../htmls/student-login.html">🎓 Student Portal</a>
+        <a href="../htmls/driver-login.html">🚗 Driver Portal</a>
+        <a href="../htmls/admin-login.html">⚙️ Admin Portal</a>
+        <a href="../htmls/password-reset.html">🔐 Reset Password</a>
+    </nav>
+
+    <div class="portal-header">
+        <h1 class="portal-title">UCC SHUTTLE TRACKER</h1>
+        <p class="portal-subtitle">Choose your role to get started</p>
+    </div>
+
+    <div class="role-cards">
+        <!-- Student Role Card -->
+        <a href="../htmls/student-login.html" class="student-role role-card">
+            <div class="role-icon">🎓</div>
+            <h2 class="role-title">Student</h2>
+            <div class="role-description">
+                Track shuttles in real-time, request rides, and view your trip history.
+            </div>
+            <div class="role-features">
+                <div class="feature-item">
+                    <span class="feature-item">Live shuttle tracking</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Request rides to any location</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">View trip history</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Get real-time notifications</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Driver Role Card -->
+        <a href="../htmls/driver-login.html" class="driver-role role-card">
+            <div class="role-icon">🚗</div>
+            <h2 class="role-title">Driver</h2>
+            <div class="role-description">
+                Share your location with students, manage schedules, and track performance metrics.
+            </div>
+            <div class="role-features">
+                <div class="feature-item">
+                    <span class="feature-item">Real-time location sharing</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Performance tracking</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Work schedule management</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Emergency alerts</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Passenger notifications</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Admin Role Card -->
+        <a href="../htmls/admin-login.html" class="admin-role role-card">
+            <div class="role-icon">⚙️</div>
+            <h2 class="role-title">Administrator</h2>
+            <div class="role-description">
+                Manage users, monitor shuttles, and access comprehensive system analytics.
+            </div>
+            <div class="role-features">
+                <div class="feature-item">
+                    <span class="feature-item">User management system</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Shuttle fleet control</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Real-time analytics</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">Emergency monitoring</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-item">System security</span>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-section">
+        <div class="stat-card">
+            <span class="stat-number" id="activeShuttles">5</span>
+            <span class="stat-label">Active Shuttles</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="activeUsers">42</span>
+            <span class="stat-label">Active Users</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="todayTrips">156</span>
+            <span class="stat-label">Today's Trips</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="avgWaitTime">8</span>
+            <span class="stat-label">Avg Wait Time</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">98%</span>
+            <span class="stat-label">On-Time Rate</span>
+        </div>
+    </div>
+
+    <script>
+        let statsData = {
+            activeShuttles: 5,
+            activeUsers: 42,
+            todayTrips: 156,
+            avgWaitTime: 8,
+            onTimeRate: 98
+        };
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🏠 Main Portal loaded');
+            
+            // Close mobile menu
+            closeMobileMenu();
+            
+            // Initialize database
+            if (window.uccDB) {
+                window.uccDB.initialize();
+                loadSystemStats();
+            } else {
+                console.log('⚠️ Database module not loaded - using demo mode');
+            }
+            
+            // Animate stats on scroll
+            animateStats();
+        });
+
+        // Load system stats
+        async function loadSystemStats() {
+            try {
+                // Check database connectivity
+                const dbCheck = await window.uccDB.testDatabaseConnection();
+                if (dbCheck.success) {
+                    // Mock data for now - in real app, this would fetch from API
+                    updateStatsDisplay(statsData);
+                } else {
+                    console.log('⚠️ Database connection issue');
+                }
+            } catch (error) {
+                console.error('❌ Error loading stats:', error);
+            }
+        }
+
+        // Update stats display with animation
+        function updateStatsDisplay(data) {
+            Object.keys(data).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    animateNumber(element, parseInt(element.textContent));
+                }
+            });
+        }
+
+        // Animate number changes
+        function animateNumber(element, start, end) {
+            const duration = 1000;
+            const startTime = Date.now();
+            
+            const animate = () => {
+                const now = Date.now();
+                const progress = Math.min((now - startTime) / duration, 1);
+                const current = Math.floor(start + (end - start) * progress);
+                
+                element.textContent = current;
+                
+                if (current < end) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            
+            animate();
+        }
+
+        // Mobile menu functions
+        function toggleMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.classList.toggle('active');
+            }
+        }
+
+        function closeMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.classList.remove('active');
+            }
+        }
+
+        // Animate stats on page load
+        function animateStats() {
+            setTimeout(() => {
+                updateStatsDisplay({
+                    activeShuttles: 8,
+                    activeUsers: 156,
+                    todayTrips: 342,
+                    avgWaitTime: 6,
+                    onTimeRate: 96
+                });
+            }, 1500);
+            
+            setTimeout(() => {
+                updateStatsDisplay(statsData);
+            }, 3000);
+        }
+
+        // Handle scroll events for continuous animation
+        let isScrolling = false;
+        document.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                isScrolling = true;
+            }
+        });
+
+        document.addEventListener('scrollend', () => {
+            setTimeout(() => {
+                isScrolling = false;
+            }, 100);
+        });
+    </script>
+</body>
+</html>

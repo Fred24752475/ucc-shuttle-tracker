@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "defaultProvider": "azure",
+  "resources": [
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "ucc-shuttle-tracker",
+      "location": "East US",
+      "properties": {
+        "serverFarmId": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Web/serverfarms/{app-service-plan}",
+        "siteConfig": {
+          "nodeVersion": "20-lts",
+          "appSettings": [
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "20.x"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

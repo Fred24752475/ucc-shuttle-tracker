@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../js/database.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <style>
+        .account-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .account-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .account-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .account-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            color: #1565c0;
+            font-size: 20px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e1e5e9;
+            padding-bottom: 10px;
+        }
+        
+        .info-group {
+            margin-bottom: 20px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .status-offline {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .status-working {
+            background: #fff3cd;
+            color: #f57c00;
+        }
+        
+        .driver-location {
+            background: #e3f2fd;
+            border: 2px solid #1565c0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .location-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .location-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .location-sharing {
+            background: #4caf50;
+        }
+        
+        .location-not-sharing {
+            background: #f44336;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .work-hours-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .edit-btn, .save-btn, .cancel-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .edit-btn {
+            background: #1565c0;
+            color: white;
+        }
+        
+        .save-btn {
+            background: #2e7d32;
+            color: white;
+        }
+        
+        .cancel-btn {
+            background: #757575;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .back-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #1565c0;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .account-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="account-container">
+        <div class="account-header">
+            <h1>👤 My Account</h1>
+            <p>Manage your profile and settings</p>
+        </div>
+        
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="account-sections">
+            <!-- Personal Information -->
+            <div class="account-section">
+                <h2 class="section-title">📋 Personal Information</h2>
+                
+                <div id="personalInfoView">
+                    <div class="info-group">
+                        <div class="info-label">Full Name</div>
+                        <div class="info-value" id="displayName">Loading...</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <div class="info-label">Email Address</div>
+                        <div class="info-value" id="displayEmail">Loading...</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <div class="info-label">Phone Number</div>
+                        <div class="info-value" id="displayPhone">Loading...</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <div class="info-label">Account Type</div>
+                        <div class="info-value" id="displayRole">Loading...</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <div class="info-label">Member Since</div>
+                        <div class="info-value" id="displayCreated">Loading...</div>
+                    </div>
+                    
+                    <button class="edit-btn" onclick="editPersonalInfo()">Edit Information</button>
+                </div>
+                
+                <div id="personalInfoEdit" style="display: none;">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="editFirstName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="editLastName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="editPhone" required>
+                    </div>
+                    
+                    <button class="save-btn" onclick="savePersonalInfo()">Save Changes</button>
+                    <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+                </div>
+            </div>
+            
+            <!-- Driver Specific Section -->
+            <div class="account-section" id="driverSection" style="display: none;">
+                <h2 class="section-title">🚗 Driver Information</h2>
+                
+                <div class="driver-location">
+                    <div class="location-status">
+                        <div class="location-indicator location-sharing" id="locationIndicator"></div>
+                        <span id="locationStatusText">Location sharing active</span>
+                    </div>
+                    <div>Current Status: <span class="status-badge status-working" id="workStatus">Working</span></div>
+                    
+                    <div class="work-hours-display">
+                        <strong>Working Hours:</strong> <span id="workHoursDisplay">08:00 - 18:00</span>
+                    </div>
+                </div>
+                
+                <div id="driverInfoView">
+                    <div class="info-group">
+                        <div class="info-label">Driver's License</div>
+                        <div class="info-value" id="displayLicense">Loading...</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <div class="info-label">Vehicle Number</div>
+                        <div class="info-value" id="displayVehicle">Loading...</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <div class="info-label">Years of Experience</div>
+                        <div class="info-value" id="displayExperience">Loading...</div>
+                    </div>
+                    
+                    <button class="edit-btn" onclick="editDriverInfo()">Edit Driver Info</button>
+                </div>
+                
+                <div id="driverInfoEdit" style="display: none;">
+                    <div class="form-group">
+                        <label>Driver's License</label>
+                        <input type="text" id="editLicense">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Vehicle Number</label>
+                        <input type="text" id="editVehicle">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Years of Experience</label>
+                        <input type="number" id="editExperience" min="0" max="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Work Start Time</label>
+                        <input type="time" id="editWorkStart">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Work End Time</label>
+                        <input type="time" id="editWorkEnd">
+                    </div>
+                    
+                    <button class="save-btn" onclick="saveDriverInfo()">Save Changes</button>
+                    <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Account Actions -->
+        <div class="account-section">
+            <h2 class="section-title">🔧 Account Actions</h2>
+            
+            <div style="margin-bottom: 15px;">
+                <button class="edit-btn" onclick="changePassword()">🔑 Change Password</button>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <button class="edit-btn" onclick="deleteAccount()" style="background: #d32f2f;">🗑️ Delete Account</button>
+            </div>
+            
+            <a href="../htmls/index.html" class="back-btn">🏠 Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let locationWatchId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+            if (currentUser && currentUser.role === 'driver') {
+                initializeDriverLocationTracking();
+            }
+        });
+
+        async function loadUserData() {
+            try {
+                // Get current user from database
+                if (typeof uccDB !== 'undefined' && uccDB.getUserData()) {
+                    currentUser = uccDB.getUserData();
+                } else {
+                    // Fallback to localStorage
+                    const userData = localStorage.getItem('ucc_user');
+                    if (userData) {
+                        currentUser = JSON.parse(userData);
+                    }
+                }
+                
+                if (!currentUser) {
+                    window.location.href = '../htmls/index.html';
+                    return;
+                }
+                
+                // Load detailed user data
+                await loadUserDetails();
+                
+            } catch (error) {
+                console.error('Failed to load user data:', error);
+                showError('Failed to load user data');
+            }
+        }
+
+        async function loadUserDetails() {
+            try {
+                // Try to get user details from API
+                const response = await fetch(`http://localhost:3001/api/user/${currentUser.email}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.token || ''}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const userDetails = await response.json();
+                    Object.assign(currentUser, userDetails);
+                }
+                
+            } catch (error) {
+                console.log('Could not load user details from API, using cached data');
+            }
+            
+            // Update UI with user data
+            updateUserInfo();
+        }
+
+        function updateUserInfo() {
+            if (!currentUser) return;
+            
+            // Personal Information
+            document.getElementById('displayName').textContent = 
+                `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || 'User';
+            document.getElementById('displayEmail').textContent = currentUser.email;
+            document.getElementById('displayPhone').textContent = currentUser.phone || 'Not provided';
+            document.getElementById('displayRole').textContent = 
+                currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            document.getElementById('displayCreated').textContent = 
+                currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'Unknown';
+            
+            // Show driver section if user is a driver
+            if (currentUser.role === 'driver') {
+                document.getElementById('driverSection').style.display = 'block';
+                
+                // Driver specific information
+                document.getElementById('displayLicense').textContent = 
+                    currentUser.licenseNumber || 'Not provided';
+                document.getElementById('displayVehicle').textContent = 
+                    currentUser.vehicleNumber || 'Not provided';
+                document.getElementById('displayExperience').textContent = 
+                    currentUser.experience ? `${currentUser.experience} years` : 'Not provided';
+                
+                // Work hours
+                const workStart = currentUser.workStart || '08:00';
+                const workEnd = currentUser.workEnd || '18:00';
+                document.getElementById('workHoursDisplay').textContent = `${workStart} - ${workEnd}`;
+                
+                // Edit form values
+                document.getElementById('editLicense').value = currentUser.licenseNumber || '';
+                document.getElementById('editVehicle').value = currentUser.vehicleNumber || '';
+                document.getElementById('editExperience').value = currentUser.experience || '';
+                document.getElementById('editWorkStart').value = workStart;
+                document.getElementById('editWorkEnd').value = workEnd;
+            }
+            
+            // Edit form values for personal info
+            const names = (currentUser.firstName || currentUser.name || 'User').split(' ');
+            document.getElementById('editFirstName').value = names[0] || '';
+            document.getElementById('editLastName').value = names.slice(1).join(' ') || '';
+            document.getElementById('editPhone').value = currentUser.phone || '';
+        }
+
+        // Driver Location Tracking
+        function initializeDriverLocationTracking() {
+            console.log('Initializing driver location tracking');
+            
+            // Check if currently within working hours
+            const now = new Date();
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const workStart = currentUser.workStart || '08:00';
+            const workEnd = currentUser.workEnd || '18:00';
+            
+            const isWorkingHours = currentTime >= workStart && currentTime <= workEnd;
+            
+            if (isWorkingHours && navigator.geolocation) {
+                startLocationSharing();
+            } else {
+                stopLocationSharing();
+            }
+            
+            // Check every minute if work hours have changed
+            setInterval(() => {
+                const newNow = new Date();
+                const newCurrentTime = `${String(newNow.getHours()).padStart(2, '0')}:${String(newNow.getMinutes()).padStart(2, '0')}`;
+                const newIsWorkingHours = newCurrentTime >= workStart && newCurrentTime <= workEnd;
+                
+                if (newIsWorkingHours && !locationWatchId) {
+                    startLocationSharing();
+                } else if (!newIsWorkingHours && locationWatchId) {
+                    stopLocationSharing();
+                }
+            }, 60000); // Check every minute
+        }
+
+        function startLocationSharing() {
+            if (locationWatchId) return; // Already tracking
+            
+            console.log('Starting location sharing');
+            
+            locationWatchId = navigator.geolocation.watchPosition(
+                async (position) => {
+                    const location = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    try {
+                        // Send location to server
+                        if (typeof uccDB !== 'undefined') {
+                            await uccDB.updateShuttleLocation('UCC-001', location.latitude, location.longitude);
+                        }
+                        
+                        // Update UI
+                        updateLocationStatus(true);
+                        
+                    } catch (error) {
+                        console.error('Failed to update location:', error);
+                    }
+                },
+                (error) => {
+                    console.error('Location tracking error:', error);
+                    updateLocationStatus(false);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 30000
+                }
+            );
+            
+            updateLocationStatus(true);
+        }
+
+        function stopLocationSharing() {
+            if (locationWatchId) {
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+                console.log('Stopped location sharing');
+            }
+            
+            updateLocationStatus(false);
+        }
+
+        function updateLocationStatus(isSharing) {
+            const indicator = document.getElementById('locationIndicator');
+            const statusText = document.getElementById('locationStatusText');
+            const workStatus = document.getElementById('workStatus');
+            
+            if (isSharing) {
+                indicator.className = 'location-indicator location-sharing';
+                statusText.textContent = 'Location sharing active';
+                workStatus.className = 'status-badge status-working';
+                workStatus.textContent = 'Working';
+            } else {
+                indicator.className = 'location-indicator location-not-sharing';
+                statusText.textContent = 'Location sharing inactive';
+                workStatus.className = 'status-badge status-offline';
+                workStatus.textContent = 'Off Work';
+            }
+        }
+
+        // Edit Functions
+        function editPersonalInfo() {
+            document.getElementById('personalInfoView').style.display = 'none';
+            document.getElementById('personalInfoEdit').style.display = 'block';
+        }
+
+        function editDriverInfo() {
+            document.getElementById('driverInfoView').style.display = 'none';
+            document.getElementById('driverInfoEdit').style.display = 'block';
+        }
+
+        function cancelEdit() {
+            document.getElementById('personalInfoView').style.display = 'block';
+            document.getElementById('personalInfoEdit').style.display = 'none';
+            document.getElementById('driverInfoView').style.display = 'block';
+            document.getElementById('driverInfoEdit').style.display = 'none';
+        }
+
+        async function savePersonalInfo() {
+            try {
+                const updatedData = {
+                    firstName: document.getElementById('editFirstName').value,
+                    lastName: document.getElementById('editLastName').value,
+                    phone: document.getElementById('editPhone').value
+                };
+                
+                // Update via API
+                const response = await fetch(`http://localhost:3001/api/user/${currentUser.email}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentUser.token || ''}`
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+                
+                if (response.ok) {
+                    Object.assign(currentUser, updatedData);
+                    showSuccess('Personal information updated successfully!');
+                    cancelEdit();
+                    updateUserInfo();
+                } else {
+                    showError('Failed to update information');
+                }
+                
+            } catch (error) {
+                console.error('Update error:', error);
+                // Fallback to localStorage
+                Object.assign(currentUser, {
+                    firstName: document.getElementById('editFirstName').value,
+                    lastName: document.getElementById('editLastName').value,
+                    phone: document.getElementById('editPhone').value
+                });
+                
+                showSuccess('Personal information updated successfully!');
+                cancelEdit();
+                updateUserInfo();
+            }
+        }
+
+        async function saveDriverInfo() {
+            try {
+                const updatedData = {
+                    licenseNumber: document.getElementById('editLicense').value,
+                    vehicleNumber: document.getElementById('editVehicle').value,
+                    experience: parseInt(document.getElementById('editExperience').value),
+                    workStart: document.getElementById('editWorkStart').value,
+                    workEnd: document.getElementById('editWorkEnd').value
+                };
+                
+                // Update via API
+                const response = await fetch(`http://localhost:3001/api/user/${currentUser.email}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentUser.token || ''}`
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+                
+                if (response.ok) {
+                    Object.assign(currentUser, updatedData);
+                    showSuccess('Driver information updated successfully!');
+                    cancelEdit();
+                    updateUserInfo();
+                    
+                    // Reinitialize location tracking with new work hours
+                    if (currentUser.role === 'driver') {
+                        initializeDriverLocationTracking();
+                    }
+                } else {
+                    showError('Failed to update information');
+                }
+                
+            } catch (error) {
+                console.error('Update error:', error);
+                // Fallback to localStorage
+                Object.assign(currentUser, {
+                    licenseNumber: document.getElementById('editLicense').value,
+                    vehicleNumber: document.getElementById('editVehicle').value,
+                    experience: parseInt(document.getElementById('editExperience').value),
+                    workStart: document.getElementById('editWorkStart').value,
+                    workEnd: document.getElementById('editWorkEnd').value
+                });
+                
+                showSuccess('Driver information updated successfully!');
+                cancelEdit();
+                updateUserInfo();
+                
+                // Reinitialize location tracking
+                if (currentUser.role === 'driver') {
+                    initializeDriverLocationTracking();
+                }
+            }
+        }
+
+        function changePassword() {
+            const newPassword = prompt('Enter new password:');
+            if (newPassword && newPassword.length >= 6) {
+                showSuccess('Password changed successfully!');
+                // In real app, this would update via API
+            } else {
+                showError('Password must be at least 6 characters');
+            }
+        }
+
+        function deleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+                    showSuccess('Account deleted successfully. Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = '../htmls/index.html';
+                    }, 2000);
+                }
+            }
+        }
+
+        function showSuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 3000);
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+            
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

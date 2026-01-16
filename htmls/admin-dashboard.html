@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../../css/admin-dashboard.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#9c27b0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <span>UCC Admin</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item active">
+                    <a href="#dashboard" data-section="dashboard">
+                        <span style="width:20px;text-align:center;">🏠</span>
+                        <span data-translate="dashboard">Admin Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#users" data-section="users">
+                        <span style="width:20px;text-align:center;">👥</span>
+                        <span data-translate="profile">User Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#shuttles" data-section="shuttles">
+                        <span style="width:20px;text-align:center;">🚌</span>
+                        <span data-translate="shuttle-map">Shuttle Fleet</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#tracking" data-section="tracking">
+                        <span style="width:20px;text-align:center;">🗺️</span>
+                        <span>Live Tracking</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#drivers" data-section="drivers">
+                        <span style="width:20px;text-align:center;">👨‍✈️</span>
+                        <span data-translate="support">Driver Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#trips" data-section="trips">
+                        <span style="width:20px;text-align:center;">🛣️</span>
+                        <span>Trip Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#reports" data-section="reports">
+                        <span style="width:20px;text-align:center;">📊</span>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#settings" data-section="settings">
+                        <span style="width:20px;text-align:center;">⚙️</span>
+                        <span>System Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=9c27b0&color=fff" alt="User">
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Admin User</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+            </div>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span data-translate="logout">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-content">
+                <div class="welcome-message">
+                    <h1 data-translate="welcome-back">Welcome back, <span id="adminName">Admin</span>! 👋</h1>
+                    <p>System administration and management dashboard</p>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalUsersCount">0</span>
+                        <span class="stat-label">Total Users</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="activeShuttlesCount">0</span>
+                        <span class="stat-label">Active Shuttles</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="todayTripsCount">0</span>
+                        <span class="stat-label">Today's Trips</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Quick Actions Grid -->
+            <section class="quick-actions">
+                <h2 data-translate="quick-actions">Quick Actions</h2>
+                <div class="action-grid">
+                    <div class="action-card" data-action="add-user">
+                        <div class="action-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h3>Add User</h3>
+                        <p>Create new student, driver or admin account</p>
+                    </div>
+                    <div class="action-card" data-action="add-shuttle">
+                        <div class="action-icon">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <h3>Add Shuttle</h3>
+                        <p>Add new shuttle to fleet</p>
+                    </div>
+                    <div class="action-card" data-action="assign-driver">
+                        <div class="action-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <h3>Assign Driver</h3>
+                        <p>Assign driver to shuttle route</p>
+                    </div>
+                    <div class="action-card" data-action="system-report">
+                        <div class="action-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h3>Generate Report</h3>
+                        <p>Download system analytics report</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics Overview -->
+            <section class="stats-overview">
+                <h2>System Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-users stat-icon users"></i>
+                            <span class="stat-percentage">+12%</span>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalStudents">0</h3>
+                            <p>Total Students</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-id-card stat-icon drivers"></i>
+                            <span class="stat-percentage">+5%</span>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalDrivers">0</h3>
+                            <p>Total Drivers</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-bus stat-icon shuttles"></i>
+                            <span class="stat-percentage">+2</span>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalShuttles">0</h3>
+                            <p>Total Shuttles</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <i class="fas fa-route stat-icon trips"></i>
+                            <span class="stat-percentage">+18%</span>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="monthlyTrips">0</h3>
+                            <p>Monthly Trips</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activity -->
+            <section class="recent-activity">
+                <h2>Recent Activity</h2>
+                <div class="activity-list" id="activityList">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4>New student registered</h4>
+                            <p>John Doe joined the platform</p>
+                            <span class="activity-time">2 minutes ago</span>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-bus"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4>Shuttle UCC-001 started route</h4>
+                            <p>Campus Express route active</p>
+                            <span class="activity-time">15 minutes ago</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../js/dark-mode.js"></script>
+    <script src="../js/language-switcher.js"></script>
+    <script src="../js/role-protection.js"></script>
+    <script src="../js/admin-dashboard.js"></script>
+</body>
+</html>

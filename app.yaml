@@ -1,0 +1,10 @@
+runtime: nodejs20
+
+env_variables:
+  NODE_ENV: production
+  JWT_SECRET: your-super-strong-jwt-secret-for-production
+  JWT_REFRESH_SECRET: your-super-strong-refresh-secret-for-production
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10

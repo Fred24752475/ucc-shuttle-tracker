@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Driver Registration - UCC Shuttle Tracker</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../js/database.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff6b35">
+    <style>
+        .driver-register-container {
+            max-width: 550px;
+            margin: 30px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .driver-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .driver-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .driver-header h1 {
+            color: #ff6b35;
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .driver-header p {
+            color: #666;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .role-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .driver-fields {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #ff6b35;
+        }
+
+        .driver-fields h3 {
+            color: #ff6b35;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .location-sharing {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .location-sharing h4 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .location-sharing p {
+            color: #856404;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .work-hours {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .work-hours .form-group {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin-top: 2px;
+            width: auto;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .back-link a {
+            color: #ff6b35;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .driver-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff6b35;
+        }
+
+        .driver-info h3 {
+            color: #ff6b35;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .driver-info p {
+            color: #666;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .field-error {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .form-group input.error,
+        .form-group select.error {
+            border-color: #f44336;
+            box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .driver-register-container {
+                margin: 20px auto;
+                padding: 30px 20px;
+                max-width: 95%;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .work-hours {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .driver-header h1 {
+                font-size: 28px;
+            }
+
+            .driver-icon {
+                font-size: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .driver-register-container {
+                margin: 10px;
+                padding: 25px 15px;
+            }
+
+            .driver-header h1 {
+                font-size: 24px;
+            }
+
+            .driver-icon {
+                font-size: 40px;
+            }
+
+            .form-group input,
+            .form-group select {
+                padding: 18px;
+                font-size: 16px;
+            }
+
+            .submit-btn {
+                padding: 20px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body class="login-screen">
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-header">
+            <h3 style="color: white; margin: 0;">🚗 Driver Register</h3>
+            <button class="hamburger-menu" onclick="toggleMobileMenu()">☰</button>
+        </div>
+        <ul class="mobile-nav-items">
+            <li><a href="../htmls/driver-login.html" onclick="closeMobileMenu()">🚗 Driver Login</a></li>
+            <li><a href="../htmls/driver-register.html" onclick="closeMobileMenu()">➕ Driver Register</a></li>
+            <li><a href="../htmls/index.html" onclick="closeMobileMenu()">🏠 Main Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Desktop Navigation -->
+    <nav class="desktop-nav" id="desktopNav">
+        <a href="../htmls/driver-login.html">🚗 Driver Login</a>
+        <a href="../htmls/driver-register.html">➕ Driver Register</a>
+        <a href="../htmls/index.html">🏠 Main Portal</a>
+    </nav>
+
+    <div class="driver-register-container">
+        <div class="driver-header">
+            <div class="driver-icon">🚗</div>
+            <h1>Driver Registration</h1>
+            <p>Create your UCC Shuttle Tracker driver account</p>
+            <div class="role-badge">Driver Portal</div>
+        </div>
+
+        <div class="driver-info">
+            <h3>🚗 Driver Account Benefits</h3>
+            <p>• Track your shuttle assignments and routes</p>
+            <p>• Share real-time location with students</p>
+            <p>• Manage your work schedule and availability</p>
+            <p>• View performance metrics and ratings</p>
+            <p>• Receive emergency alerts and notifications</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <form id="driverRegisterForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">First Name *</label>
+                    <input type="text" id="firstName" name="firstName" required placeholder="John">
+                </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name *</label>
+                    <input type="text" id="lastName" name="lastName" required placeholder="Doe">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required placeholder="driver@ucc.edu">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required placeholder="+233XXXXXXXXX">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" required placeholder="Create a strong password">
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password *</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required
+                    placeholder="Re-enter your password">
+            </div>
+
+            <!-- Driver Specific Fields -->
+            <div class="driver-fields">
+                <h3>🚗 Driver Information</h3>
+
+                <div class="location-sharing">
+                    <h4>📍 Location Sharing</h4>
+                    <p>As a driver, your location will be automatically shared with students during work hours.</p>
+
+                    <div class="work-hours">
+                        <div class="form-group">
+                            <label for="workStart">Work Start Time</label>
+                            <input type="time" id="workStart" name="workStart" value="08:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="workEnd">Work End Time</label>
+                            <input type="time" id="workEnd" name="workEnd" value="18:00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="locationConsent" name="locationConsent" required>
+                            <label for="locationConsent">I understand my location will be shared with students during
+                                work hours for shuttle tracking</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="licenseNumber">Driver's License Number *</label>
+                    <input type="text" id="licenseNumber" name="licenseNumber" required placeholder="DL-2024-001">
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicleNumber">Vehicle Number/Plate *</label>
+                    <input type="text" id="vehicleNumber" name="vehicleNumber" required placeholder="UCC-001">
+                </div>
+
+                <div class="form-group">
+                    <label for="experience">Years of Experience</label>
+                    <input type="number" id="experience" name="experience" min="0" max="50" placeholder="5">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">🚗 Create Driver Account</button>
+        </form>
+
+        <div class="back-link">
+            <p>Already have an account? <a href="../htmls/driver-login.html">Login as Driver</a></p>
+            <p>Forgot your password? <a href="../htmls/password-reset.html">Reset Password</a></p>
+            <p><a href="../htmls/index.html">← Back to Main Portal</a></p>
+        </div>
+    </div>
+
+    <script>
+        let formSubmitted = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🚗 Driver Registration page loaded');
+
+            // Initialize database connection
+            if (window.uccDB) {
+                console.log('📡 Database module loaded');
+                testDatabaseConnection();
+            } else {
+                console.log('⚠️ Database module not loaded - using demo mode');
+            }
+        });
+
+        // Form validation
+        function validateDriverForm() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const licenseNumber = document.getElementById('licenseNumber').value.trim();
+            const vehicleNumber = document.getElementById('vehicleNumber').value.trim();
+            const locationConsent = document.getElementById('locationConsent').checked;
+
+            console.log('🔍 Validating driver form:', { firstName, lastName, email, phone });
+
+            // Clear previous errors
+            clearValidationErrors();
+
+            let isValid = true;
+
+            // Validate required fields
+            if (!firstName || firstName.length < 2) {
+                showFieldError('firstName', 'First name must be at least 2 characters');
+                isValid = false;
+            }
+
+            if (!lastName || lastName.length < 2) {
+                showFieldError('lastName', 'Last name must be at least 2 characters');
+                isValid = false;
+            }
+
+            if (!email || !email.includes('@') || !email.includes('.')) {
+                showFieldError('email', 'Please enter a valid email address');
+                isValid = false;
+            }
+
+            if (!phone || phone.length < 10) {
+                showFieldError('phone', 'Phone number must be at least 10 digits');
+                isValid = false;
+            }
+
+            if (!password || password.length < 6) {
+                showFieldError('password', 'Password must be at least 6 characters');
+                isValid = false;
+            }
+
+            if (password !== confirmPassword) {
+                showFieldError('confirmPassword', 'Passwords do not match');
+                isValid = false;
+            }
+
+            // Driver-specific validation
+            if (!licenseNumber || licenseNumber.length < 5) {
+                showFieldError('licenseNumber', 'License number required (min 5 characters)');
+                isValid = false;
+            }
+
+            if (!vehicleNumber || vehicleNumber.length < 3) {
+                showFieldError('vehicleNumber', 'Vehicle number required (min 3 characters)');
+                isValid = false;
+            }
+
+            if (!locationConsent) {
+                showFieldError('locationConsent', 'Location consent required for driver accounts');
+                isValid = false;
+            }
+
+            console.log('✅ Driver form validation result:', isValid);
+            return isValid;
+        }
+
+        function showFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.style.borderColor = '#f44336';
+                field.style.boxShadow = '0 0 5px rgba(244, 67, 54, 0.3)';
+
+                let errorDiv = field.parentNode.querySelector('.field-error');
+                if (!errorDiv) {
+                    errorDiv = document.createElement('div');
+                    errorDiv.className = 'field-error';
+                    field.parentNode.appendChild(errorDiv);
+                }
+                errorDiv.textContent = message;
+            }
+        }
+
+        function clearValidationErrors() {
+            document.querySelectorAll('.field-error').forEach(error => error.remove());
+
+            ['firstName', 'lastName', 'email', 'phone', 'password', 'confirmPassword', 'licenseNumber', 'vehicleNumber'].forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.style.borderColor = '#e1e5e9';
+                    field.style.boxShadow = 'none';
+                }
+            });
+        }
+
+        // Form submission
+        document.getElementById('driverRegisterForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            if (formSubmitted) {
+                console.log('Form already submitted');
+                return;
+            }
+
+            console.log('🚗 Starting driver registration...');
+
+            // Validation
+            if (!validateDriverForm()) {
+                console.log('❌ Driver form validation failed');
+                return;
+            }
+
+            // Get form data
+            const formData = {
+                name: document.getElementById('firstName').value.trim() + ' ' + document.getElementById('lastName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                password: document.getElementById('password').value,
+                role: 'driver', // Hardcoded for driver registration
+                licenseNumber: document.getElementById('licenseNumber').value.trim(),
+                vehicleNumber: document.getElementById('vehicleNumber').value.trim(),
+                experience: parseInt(document.getElementById('experience').value) || 0,
+                workStart: document.getElementById('workStart').value,
+                workEnd: document.getElementById('workEnd').value,
+                locationConsent: document.getElementById('locationConsent').checked
+            };
+
+            console.log('Driver form data prepared:', formData);
+
+            formSubmitted = true;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            try {
+                // Try to create account via API
+                console.log('🔑 Attempting API driver registration...');
+                console.log('🔍 Form data being sent:', formData);
+                
+                const response = await fetch('http://localhost:3001/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                console.log('API Response:', result);
+
+                if (response.ok && result.success) {
+                    console.log('✅ Driver account created via API');
+
+                    // Show enhanced success message
+                    const successMsg = `✅ Driver Account Created Successfully! 🚗
+
+👤 Welcome, ${formData.firstName} ${formData.lastName}!
+
+📧 Email: ${formData.email}
+🎭 Role: Driver
+📱 Phone: ${formData.phone}
+🚗 Vehicle: ${formData.vehicleNumber}
+📋 License: ${formData.licenseNumber}
+
+Your driver account has been saved to the database and you can now:
+• Track your shuttle assignments and routes
+• Share real-time location with students
+• Manage your work schedule and availability
+• View performance metrics and ratings
+• Receive emergency alerts and notifications
+
+Redirecting to driver login in 3 seconds...`;
+
+                    showSuccess(successMsg);
+
+                    // Store user data temporarily for reference
+                    localStorage.setItem('ucc_last_registered_email', formData.email);
+
+                    setTimeout(() => {
+                        window.location.href = '../htmls/driver-login.html';
+                    }, 3000);
+                    return;
+                } else {
+                    console.log('❌ API driver registration failed:', result.message);
+                    showError(result.message || 'Failed to create driver account. Please try again.');
+
+                    formSubmitted = false;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚗 Create Driver Account';
+                }
+
+            } catch (error) {
+                console.error('❌ Driver registration error:', error);
+                showError('❌ Server Connection Error\n\nCannot connect to the database server.\n\nPlease make sure:\n1. The server is running (node server.js)\n2. The database is initialized\n3. You have an internet connection\n\nThen try again.');
+
+                formSubmitted = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚗 Create Driver Account';
+            }
+        });
+
+        // Test database connection
+        async function testDatabaseConnection() {
+            try {
+                const response = await fetch('http://localhost:3001/api/ping');
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Database connection verified');
+                } else {
+                    console.log('⚠️ Database connection issue:', data.error);
+                }
+            } catch (error) {
+                console.log('❌ Database connection test failed:', error);
+            }
+        }
+
+        // Message functions
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+
+            document.getElementById('successMessage').style.display = 'none';
+
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+
+            document.getElementById('errorMessage').style.display = 'none';
+
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Mobile menu functions
+        function toggleMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.classList.toggle('active');
+            }
+        }
+
+        function closeMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.classList.remove('active');
+            }
+        }
+
+        // Prevent form resubmission
+        window.addEventListener('beforeunload', function () {
+            formSubmitted = false;
+        });
+    </script>
+</body>
+
+</html>

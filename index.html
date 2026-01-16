@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UCC Shuttle Tracker - Redirecting...</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .redirect-container {
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+        }
+        .redirect-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+        .redirect-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .redirect-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+    <div class="redirect-container">
+        <div class="redirect-icon">🚌</div>
+        <div class="redirect-text">UCC Shuttle Tracker</div>
+        <div class="redirect-subtitle">Redirecting to main portal...</div>
+    </div>
+
+    <script>
+        // Auto-redirect to the main portal
+        setTimeout(() => {
+            window.location.href = '/htmls/index.html';
+        }, 1500);
+    </script>
+</body>
+</html>

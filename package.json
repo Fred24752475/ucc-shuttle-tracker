@@ -1,0 +1,55 @@
+{
+  "name": "ucc-shuttle-tracker",
+  "version": "1.0.0",
+  "description": "University of Cape Coast Shuttle Tracking System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "dev:sqlite": "nodemon server.js",
+    "install-deps": "npm install",
+    "setup": "npm install && node setup-db.js",
+    "setup:postgres": "node setup-db.js",
+    "deploy:gcp": "gcloud app deploy",
+    "deploy:cloudrun": "./deploy-cloudrun.sh",
+    "test-db": "node test-database.js",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "migrate:make": "knex migrate:make",
+    "seed": "knex seed:run",
+    "db:setup": "npm run migrate && npm run seed"
+  },
+  "keywords": [
+    "shuttle",
+    "tracking",
+    "university",
+    "transport",
+    "real-time"
+  ],
+  "author": "UCC Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.0",
+    "express-validator": "^7.3.1",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "knex": "^3.1.0",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.12",
+    "pg": "^8.17.1",
+    "socket.io": "^4.7.2",
+    "sqlite3": "^5.1.6",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}

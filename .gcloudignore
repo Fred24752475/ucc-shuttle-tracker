@@ -1,0 +1,23 @@
+# Ignore development files
+node_modules/
+.env
+.env.local
+.env.example
+*.log
+.git/
+.gitignore
+README.md
+DEPLOYMENT_GUIDE.md
+view-db.js
+show-schema.js
+setup-db.js
+deploy-*.sh
+*.md
+
+# Ignore SQLite files
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignore development scripts
+test-*.js

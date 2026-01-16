@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - UCC Shuttle Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .register-container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 500px; }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { color: #667eea; font-size: 28px; margin-bottom: 5px; }
+        .logo p { color: #666; font-size: 14px; }
+        .role-selector { display: flex; gap: 10px; margin-bottom: 25px; }
+        .role-btn { flex: 1; padding: 15px; border: 2px solid #e0e0e0; background: white; border-radius: 10px; cursor: pointer; transition: all 0.3s; text-align: center; }
+        .role-btn:hover { border-color: #667eea; }
+        .role-btn.active { border-color: #667eea; background: #f0f4ff; }
+        .role-btn .icon { font-size: 24px; margin-bottom: 5px; }
+        .role-btn .label { font-size: 14px; font-weight: 600; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-group input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border 0.3s; }
+        .form-group input:focus { outline: none; border-color: #667eea; }
+        .btn-register { width: 100%; padding: 14px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s; }
+        .btn-register:hover { background: #5568d3; }
+        .btn-register:disabled { background: #ccc; cursor: not-allowed; }
+        .links { text-align: center; margin-top: 20px; }
+        .links a { color: #667eea; text-decoration: none; font-size: 14px; margin: 0 10px; }
+        .links a:hover { text-decoration: underline; }
+        .error { background: #fee; color: #c33; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .success { background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="logo">
+            <h1>📝 Create Account</h1>
+            <p>UCC Shuttle Tracker</p>
+        </div>
+        
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+        
+        <div class="role-selector">
+            <div class="role-btn active" data-role="student">
+                <div class="icon">🎓</div>
+                <div class="label">Student</div>
+            </div>
+            <div class="role-btn" data-role="driver">
+                <div class="icon">🚗</div>
+                <div class="label">Driver</div>
+            </div>
+        </div>
+        
+        <form id="registerForm">
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="name" required placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label>Email Address *</label>
+                <input type="email" id="email" required placeholder="your.email@ucc.edu.gh">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="phone" placeholder="+233 XX XXX XXXX">
+            </div>
+            <div class="form-group">
+                <label>Password *</label>
+                <input type="password" id="password" required minlength="6" placeholder="At least 6 characters">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password *</label>
+                <input type="password" id="confirmPassword" required minlength="6" placeholder="Re-enter password">
+            </div>
+            <button type="submit" class="btn-register" id="submitBtn">Create Account</button>
+        </form>
+        
+        <div class="links">
+            <a href="index.html">← Back to Home</a>
+            <span>|</span>
+            <a href="student-login.html">Already have an account?</a>
+        </div>
+    </div>
+
+    <script>
+        let selectedRole = 'student';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Role selection
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedRole = this.getAttribute('data-role');
+                });
+            });
+            
+            // Form submission
+            document.getElementById('registerForm').addEventListener('submit', handleRegister);
+        });
+        
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            
+            // Validation
+            if (password !== confirmPassword) {
+                errorMsg.textContent = 'Passwords do not match!';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            if (password.length < 6) {
+                errorMsg.textContent = 'Password must be at least 6 characters!';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone, password, role: selectedRole })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    successMsg.textContent = 'Account created successfully! Redirecting to login...';
+                    successMsg.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = selectedRole + '-login.html';
+                    }, 2000);
+                } else {
+                    errorMsg.textContent = data.message || 'Registration failed';
+                    errorMsg.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Account';
+                }
+            } catch (error) {
+                errorMsg.textContent = 'Connection error. Please try again.';
+                errorMsg.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
+        }
+    </script>
+</body>
+</html>
