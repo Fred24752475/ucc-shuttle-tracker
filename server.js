@@ -202,6 +202,84 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// Forgot Password - Request reset code
+app.post('/api/auth/forgot-password', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { email } = req.body;
+        
+        const result = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Email not found' });
+        }
+        
+        const userId = result.rows[0].id;
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        
+        await client.query(
+            'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
+            [userId, resetCode, expiresAt]
+        );
+        
+        // Send email (if configured)
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            try {
+                await emailTransporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to: email,
+                    subject: 'Password Reset Code - UCC Shuttle Tracker',
+                    text: `Your password reset code is: ${resetCode}\n\nThis code will expire in 15 minutes.`
+                });
+            } catch (emailError) {
+                console.error('Email error:', emailError);
+            }
+        }
+        
+        res.json({ success: true, message: 'Reset code sent to your email' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ success: false, message: 'Error processing request' });
+    } finally {
+        client.release();
+    }
+});
+
+// Reset Password - Verify code and update password
+app.post('/api/auth/reset-password', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { email, resetCode, newPassword } = req.body;
+        
+        const userResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Email not found' });
+        }
+        
+        const userId = userResult.rows[0].id;
+        
+        const resetResult = await client.query(
+            'SELECT * FROM password_resets WHERE user_id = $1 AND reset_code = $2 AND used = false AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
+            [userId, resetCode]
+        );
+        
+        if (resetResult.rows.length === 0) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
+        }
+        
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
+        await client.query('UPDATE password_resets SET used = true WHERE id = $1', [resetResult.rows[0].id]);
+        
+        res.json({ success: true, message: 'Password reset successful' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ success: false, message: 'Error resetting password' });
+    } finally {
+        client.release();
+    }
+});
+
 // User endpoints
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
     const client = await pool.connect();
