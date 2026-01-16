@@ -22,7 +22,13 @@
         .links a:hover { text-decoration: underline; }
         .error { background: #fee; color: #c33; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
     </style>
-    <script src="../js/api-config.js"></script>
+    <script>
+        // API Config - Use relative paths
+        const API_CONFIG = {
+            API_URL: ''
+        };
+        console.log('🌐 Using relative API paths');
+    </script>
 </head>
 <body>
     <div class="login-container">

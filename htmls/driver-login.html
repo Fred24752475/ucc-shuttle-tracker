@@ -23,13 +23,11 @@
         .error { background: #fee; color: #c33; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
     </style>
     <script>
-        // API Config - Auto-detect correct URL
+        // API Config - Use relative paths
         const API_CONFIG = {
-            API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                ? '' 
-                : `http://${window.location.hostname}:3001`
+            API_URL: ''
         };
-        console.log('🌐 API URL:', API_CONFIG.API_URL);
+        console.log('🌐 Using relative API paths');
     </script>
 </head>
 <body>

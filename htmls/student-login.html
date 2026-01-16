@@ -23,18 +23,16 @@
         .error { background: #fee; color: #c33; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
     </style>
     <script>
-        // API Config - Auto-detect correct URL
+        // API Config - Use relative paths for production
         const API_CONFIG = {
-            API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                ? '' 
-                : `http://${window.location.hostname}:3001`
+            API_URL: ''
         };
-        console.log('🌐 API URL:', API_CONFIG.API_URL);
+        console.log('🌐 Using relative API paths');
         // Show API URL on page for debugging
         window.addEventListener('DOMContentLoaded', () => {
             const debugDiv = document.createElement('div');
             debugDiv.style.cssText = 'position:fixed;top:0;left:0;background:black;color:lime;padding:5px;font-size:10px;z-index:9999';
-            debugDiv.textContent = 'API: ' + API_CONFIG.API_URL;
+            debugDiv.textContent = 'API: relative paths';
             document.body.appendChild(debugDiv);
         });
     </script>
