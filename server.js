@@ -18,14 +18,14 @@ const io = socketIo(server, {
 });
 
 // Initialize database
-(async () => {
-    try {
-        await createTables();
-        await seedData();
-    } catch (error) {
-        console.error('Database initialization failed:', error);
-    }
-})();
+// (async () => {
+//     try {
+//         await createTables();
+//         await seedData();
+//     } catch (error) {
+//         console.error('Database initialization failed:', error);
+//     }
+// })();
 
 // Middleware
 app.use(helmet({
