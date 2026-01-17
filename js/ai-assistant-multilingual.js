@@ -332,19 +332,14 @@ class MultilingualAIAssistant {
         messageEl.className = `ai-message ${sender}`;
 
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const avatar = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
-        const senderName = sender === 'user' ? 'You' : 'AI Assistant';
+        const senderName = sender === 'user' ? 'You' : 'Chat Gpt';
+        const avatar = sender === 'user' ? '👤' : '🤖';
 
         messageEl.innerHTML = `
             <div class="message-avatar">${avatar}</div>
             <div class="message-bubble">
-                <div class="message-header">
-                    <span class="sender-name">${senderName}</span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-text">
-                    <p>${this.formatMessage(message)}</p>
-                </div>
+                <div class="message-sender">${senderName}</div>
+                <div class="message-text">${this.formatMessage(message)}</div>
             </div>
         `;
 
