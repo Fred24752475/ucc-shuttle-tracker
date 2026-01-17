@@ -392,6 +392,8 @@ app.post('/api/friends/request', authenticateToken, async (req, res) => {
     try {
         const { receiver_id } = req.body;
         
+        console.log('📨 Friend request from:', req.user.id, 'to:', receiver_id);
+        
         // Check if already friends or request exists
         const existing = await client.query(`
             SELECT * FROM friendships 
@@ -400,13 +402,17 @@ app.post('/api/friends/request', authenticateToken, async (req, res) => {
         `, [req.user.id, receiver_id]);
         
         if (existing.rows.length > 0) {
+            console.log('⚠️ Friend request already exists');
             return res.status(400).json({ success: false, message: 'Friend request already exists' });
         }
         
+        console.log('✅ Inserting friend request into database...');
         await client.query(`
             INSERT INTO friendships (requester_id, receiver_id, status) 
             VALUES ($1, $2, 'pending')
         `, [req.user.id, receiver_id]);
+        
+        console.log('✅ Friend request inserted successfully');
         
         // Emit socket event
         io.emit(`friend_request_${receiver_id}`, {
@@ -416,8 +422,10 @@ app.post('/api/friends/request', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Friend request sent' });
     } catch (error) {
-        console.error('Error sending friend request:', error);
-        res.status(500).json({ success: false, message: 'Error sending request' });
+        console.error('❌ Error sending friend request:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ success: false, message: 'Error sending request', error: error.message });
     } finally {
         client.release();
     }
