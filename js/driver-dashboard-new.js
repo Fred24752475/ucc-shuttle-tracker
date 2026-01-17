@@ -47,15 +47,21 @@ function loadDriverData() {
 }
 
 function setupEventListeners() {
-    console.log('Setting up event listeners...');
+    console.log('🎯 Setting up event listeners...');
     
     // Navigation - Handle both nav-item and anchor clicks
-    document.querySelectorAll('.nav-item').forEach(item => {
+    const navItems = document.querySelectorAll('.nav-item');
+    console.log(`  Found ${navItems.length} navigation items`);
+    
+    navItems.forEach((item, index) => {
+        const section = item.getAttribute('data-section');
+        console.log(`  Nav ${index + 1}: ${section}`);
+        
         item.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             const section = this.getAttribute('data-section');
-            console.log('Nav clicked:', section);
+            console.log('🖱️ Nav clicked:', section);
             navigateToSection(section);
         });
         
@@ -66,7 +72,7 @@ function setupEventListeners() {
                 e.preventDefault();
                 e.stopPropagation();
                 const section = this.closest('.nav-item').getAttribute('data-section');
-                console.log('Nav anchor clicked:', section);
+                console.log('🖱️ Nav anchor clicked:', section);
                 navigateToSection(section);
             });
         }
@@ -213,7 +219,7 @@ function initializeSocket() {
 }
 
 function navigateToSection(section) {
-    console.log('Navigating to section:', section);
+    console.log('🔄 Navigating to section:', section);
     
     // Hide all sections
     const sections = ['homeSection', 'viewMapSection', 'startTripSection', 'activeRouteSection', 'completedTripsSection', 'notificationsSection', 'supportSection', 'profileSection'];
@@ -223,6 +229,7 @@ function navigateToSection(section) {
             el.style.display = 'none';
             el.style.visibility = 'hidden';
             el.style.opacity = '0';
+            console.log(`  ❌ Hiding: ${id}`);
         }
     });
 
@@ -231,7 +238,7 @@ function navigateToSection(section) {
     const activeNav = document.querySelector(`[data-section="${section}"]`);
     if (activeNav) {
         activeNav.classList.add('active');
-        console.log('Active nav updated:', section);
+        console.log('  ✅ Active nav updated:', section);
     }
 
     // Show selected section
@@ -245,7 +252,9 @@ function navigateToSection(section) {
         'profile': 'profileSection'
     };
 
-    const targetSection = document.getElementById(sectionMap[section]);
+    const targetSectionId = sectionMap[section];
+    const targetSection = document.getElementById(targetSectionId);
+    
     if (targetSection) {
         targetSection.style.display = 'block';
         targetSection.style.visibility = 'visible';
@@ -254,16 +263,19 @@ function navigateToSection(section) {
         // Force a reflow to ensure DOM is updated
         targetSection.offsetHeight;
         
-        console.log('Section shown:', sectionMap[section]);
+        console.log('  ✅ Section shown:', targetSectionId);
         
         // Load section content after a brief delay
         setTimeout(() => {
             loadSectionContent(section);
         }, 100);
     } else {
-        console.error('Target section not found:', sectionMap[section]);
+        console.error('  ❌ Target section not found:', targetSectionId);
     }
 }
+
+// Make navigateToSection globally accessible
+window.navigateToSection = navigateToSection;
 
 function loadSectionContent(section) {
     switch(section) {
