@@ -142,6 +142,7 @@
     .ai-messages {
         flex: 1;
         padding: 1.5rem 1rem;
+        padding-bottom: 100px !important; /* Space for input at bottom */
         overflow-y: auto;
         background: #1a1a2e;
         display: flex;
