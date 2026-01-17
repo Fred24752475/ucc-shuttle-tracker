@@ -52,6 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('click', () => {
             const sectionName = item.getAttribute('data-section');
             
+            // Hide bottom nav if AI section
+            const bottomNav = document.querySelector('.bottom-nav');
+            if (sectionName === 'ai-assistant' && bottomNav) {
+                bottomNav.style.display = 'none';
+            } else if (bottomNav) {
+                bottomNav.style.display = 'flex';
+            }
+            
             // Update bottom nav active state
             bottomNavItems.forEach(nav => {
                 if (nav.getAttribute('data-section') === sectionName) {
@@ -66,6 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('mobileOverlay');
             if (sidebar) sidebar.classList.remove('active');
             if (overlay) overlay.classList.remove('active');
+        });
+    });
+    
+    // Hide bottom nav when AI section is clicked from bottom nav
+    bottomNavItems.forEach(item => {
+        const originalClick = item.onclick;
+        item.addEventListener('click', () => {
+            const sectionName = item.getAttribute('data-section');
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            if (sectionName === 'ai-assistant' && bottomNav) {
+                setTimeout(() => {
+                    bottomNav.style.display = 'none';
+                }, 100);
+            }
         });
     });
 });

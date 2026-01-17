@@ -19,6 +19,17 @@
         z-index: 1000;
     }
     
+    /* HIDE BOTTOM NAV WHEN AI SECTION IS VISIBLE */
+    body:has(#aiAssistantSection:not([style*="display: none"])) .bottom-nav,
+    body:has(#aiAssistantSection[style*="display: block"]) .bottom-nav {
+        display: none !important;
+    }
+    
+    /* Alternative: Hide bottom nav when AI is active */
+    #aiAssistantSection:not([style*="display: none"]) ~ .bottom-nav {
+        display: none !important;
+    }
+    
     /* Force show input container in AI section */
     #aiAssistantSection .ai-input-container,
     .ai-assistant-section .ai-input-container {
