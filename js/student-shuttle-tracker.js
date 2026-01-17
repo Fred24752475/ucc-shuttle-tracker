@@ -72,8 +72,10 @@ async function loadActiveShuttles() {
         return;
     }
     
+    const apiUrl = window.API_CONFIG?.API_URL || '';
+    
     try {
-        const response = await fetch('/api/shuttles/active', {
+        const response = await fetch(`${apiUrl}/api/shuttles/active`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

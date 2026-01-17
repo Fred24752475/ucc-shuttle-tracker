@@ -12,8 +12,11 @@ async function startRideBroadcast() {
     }
     
     try {
+        // Get API URL
+        const apiUrl = window.API_CONFIG?.API_URL || '';
+        
         // Start ride on backend
-        const response = await fetch('/api/driver/start-ride', {
+        const response = await fetch(`${apiUrl}/api/driver/start-ride`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -56,7 +59,9 @@ async function stopRideBroadcast() {
     if (!token) return;
     
     try {
-        const response = await fetch('/api/driver/stop-ride', {
+        const apiUrl = window.API_CONFIG?.API_URL || '';
+        
+        const response = await fetch(`${apiUrl}/api/driver/stop-ride`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -152,8 +157,10 @@ async function sendLocationUpdate(latitude, longitude) {
     const token = localStorage.getItem('ucc_token');
     if (!token || !isRideActive) return;
     
+    const apiUrl = window.API_CONFIG?.API_URL || '';
+    
     try {
-        const response = await fetch('/api/driver/update-location', {
+        const response = await fetch(`${apiUrl}/api/driver/update-location`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -232,8 +239,10 @@ async function checkRideStatus() {
     const token = localStorage.getItem('ucc_token');
     if (!token) return;
     
+    const apiUrl = window.API_CONFIG?.API_URL || '';
+    
     try {
-        const response = await fetch('/api/driver/ride-status', {
+        const response = await fetch(`${apiUrl}/api/driver/ride-status`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
