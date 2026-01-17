@@ -10,6 +10,7 @@
     "install-deps": "npm install",
     "setup": "npm install && node setup-db.js",
     "setup:postgres": "node setup-db.js",
+    "setup:friends": "node setup-friend-tables.js",
     "deploy:gcp": "gcloud app deploy",
     "deploy:cloudrun": "./deploy-cloudrun.sh",
     "test-db": "node test-database.js",
