@@ -19,6 +19,13 @@
         z-index: 1000;
     }
     
+    /* Show input container in AI section */
+    .ai-assistant-section .ai-input-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
     /* Hide bottom nav when AI is active */
     .ai-assistant-section:not([style*="display: none"]) ~ .bottom-nav {
         display: none !important;
@@ -159,11 +166,12 @@
         bottom: 0;
         left: 0;
         right: 0;
-        z-index: 99;
+        z-index: 1001;
+        display: block !important;
     }
     
     .ai-input-wrapper {
-        display: flex;
+        display: flex !important;
         align-items: center;
         gap: 0.75rem;
         background: #2d3748;
@@ -171,7 +179,8 @@
         padding: 0.5rem 1rem;
     }
     
-    .ai-input-wrapper input {
+    .ai-input-wrapper input,
+    #aiInput {
         flex: 1;
         background: none;
         border: none;
@@ -179,20 +188,23 @@
         font-size: 0.95rem;
         padding: 0.5rem;
         outline: none;
+        display: block !important;
     }
     
-    .ai-input-wrapper input::placeholder {
+    .ai-input-wrapper input::placeholder,
+    #aiInput::placeholder {
         color: rgba(255,255,255,0.5);
     }
     
-    .ai-send-btn {
+    .ai-send-btn,
+    #aiSendBtn {
         width: 40px;
         height: 40px;
         border-radius: 50%;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
         color: #fff;
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         cursor: pointer;
@@ -201,13 +213,20 @@
         flex-shrink: 0;
     }
     
-    .ai-send-btn:active {
+    .ai-send-btn:active,
+    #aiSendBtn:active {
         transform: scale(0.95);
     }
     
-    .ai-send-btn:disabled {
+    .ai-send-btn:disabled,
+    #aiSendBtn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+    
+    .ai-send-btn i,
+    #aiSendBtn i {
+        font-size: 1rem;
     }
     
     /* Typing Indicator */
