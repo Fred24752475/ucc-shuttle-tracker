@@ -121,6 +121,24 @@
             <!-- Quick Actions Section -->
             <section class="quick-actions-section">
                 <h2 class="section-title" data-translate="quick-actions">Quick Actions</h2>
+                
+                <!-- Location Tracking Status -->
+                <div class="tracking-status-card">
+                    <div class="status-header">
+                        <h3>📍 Location Tracking</h3>
+                        <span class="status-badge" id="rideStatusBadge">🔴 Offline</span>
+                    </div>
+                    <p class="status-description">Start broadcasting your location to students in real-time</p>
+                    <div class="tracking-controls">
+                        <button class="btn btn-success" id="startRideBtn">
+                            <span>🚀</span> Start Broadcasting
+                        </button>
+                        <button class="btn btn-danger" id="stopRideBtn" disabled>
+                            <span>⏹️</span> Stop Broadcasting
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="action-cards">
                     <div class="action-card primary" id="startRouteCard">
                         <div class="action-icon">
@@ -488,10 +506,109 @@
         // Inline minimal scripts to avoid CSP issues
         console.log('Driver dashboard loading...');
     </script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/driver-dashboard-new.js"></script>
+    <script src="../js/driver-location-tracker.js"></script>
     <script src="../js/mobile-navigation.js"></script>
     
+    <style>
+        /* Tracking Status Card Styles */
+        .tracking-status-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .status-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status-description {
+            margin: 0 0 20px 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .tracking-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .tracking-controls .btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 768px) {
+            .tracking-controls {
+                flex-direction: column;
+            }
+            
+            .tracking-controls .btn {
+                width: 100%;
+            }
+        }
+    </style>
 
 </body>
 </html>

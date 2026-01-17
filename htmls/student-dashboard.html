@@ -343,12 +343,19 @@
         <main class="map-section" id="mapSection" style="display: none;">
             <div class="section-header">
                 <h2>🗺 Live Shuttle Map</h2>
-                <button class="back-btn" onclick="showDashboard(); return false;">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </button>
+                <div class="map-controls">
+                    <span class="shuttle-status" id="shuttleStatus">Loading...</span>
+                    <span class="active-count">Active: <strong id="activeShuttleCount">0</strong></span>
+                    <button class="refresh-btn" id="refreshShuttlesBtn">
+                        <span>🔄</span> Refresh
+                    </button>
+                    <button class="back-btn" onclick="showDashboard(); return false;">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                </div>
             </div>
             <div class="map-content">
-                <div id="shuttleMap"></div>
+                <div id="studentShuttleMap" style="height: 600px; width: 100%; border-radius: 12px;"></div>
             </div>
         </main>
 
@@ -670,6 +677,49 @@
         .map-section.fullscreen #shuttleMap {
             height: calc(100vh - 70px) !important;
         }
+        
+        /* Map controls */
+        .map-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .shuttle-status {
+            padding: 6px 12px;
+            background: #e3f2fd;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #1565c0;
+        }
+        
+        .active-count {
+            padding: 6px 12px;
+            background: #4caf50;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .refresh-btn {
+            padding: 8px 16px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: #1976d2;
+            transform: translateY(-2px);
+        }
 
         /* Shuttle popup styles */
         .shuttle-popup h4 {
@@ -947,10 +997,12 @@
 
 
     <!-- JavaScript -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/student-dashboard-events.js"></script>
     <script src="../js/student-dashboard-data.js"></script>
     <script src="../js/student-map-simple.js"></script>
+    <script src="../js/student-shuttle-tracker.js"></script>
     <script src="../js/messaging.js"></script>
     <script src="../js/dark-mode.js"></script>
     <script src="../js/language-switcher.js"></script>
@@ -959,6 +1011,21 @@
     <script src="../js/localization.js"></script>
     <script src="../js/student-location-tracker.js"></script>
     <script src="../js/student-eta-system.js"></script>
+    
+    <script>
+        // Initialize student shuttle tracker when map section is shown
+        function showMap() {
+            document.getElementById('mapSection').style.display = 'block';
+            document.getElementById('dashboardSection').style.display = 'none';
+            
+            // Initialize tracking map
+            setTimeout(() => {
+                if (typeof initializeStudentTrackingMap === 'function') {
+                    initializeStudentTrackingMap();
+                }
+            }, 100);
+        }
+    </script>
 
     <!-- REAL OPENSTREETMAP INITIALIZATION -->
     <script>

@@ -610,6 +610,227 @@ app.get('/api/messages/:friendId', authenticateToken, async (req, res) => {
 
 // ============= END FRIEND REQUEST SYSTEM =============
 
+// ============= REAL-TIME SHUTTLE TRACKING SYSTEM =============
+
+// Store active drivers and their locations in memory
+const activeDrivers = new Map(); // driverId -> { latitude, longitude, timestamp, shuttleId }
+
+// Driver starts a ride (begins broadcasting location)
+app.post('/api/driver/start-ride', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { shuttle_id, route_name } = req.body;
+        
+        // Get or create shuttle for this driver
+        let shuttle;
+        if (shuttle_id) {
+            const shuttleResult = await client.query(
+                'SELECT * FROM shuttles WHERE id = $1 AND driver_id = $2',
+                [shuttle_id, req.user.id]
+            );
+            shuttle = shuttleResult.rows[0];
+        } else {
+            // Create a default shuttle for this driver if none exists
+            const existingShuttle = await client.query(
+                'SELECT * FROM shuttles WHERE driver_id = $1',
+                [req.user.id]
+            );
+            
+            if (existingShuttle.rows.length > 0) {
+                shuttle = existingShuttle.rows[0];
+            } else {
+                const newShuttle = await client.query(
+                    'INSERT INTO shuttles (driver_id, vehicle_number, status) VALUES ($1, $2, $3) RETURNING *',
+                    [req.user.id, `SHUTTLE-${req.user.id}`, 'active']
+                );
+                shuttle = newShuttle.rows[0];
+            }
+        }
+        
+        // Update shuttle status to active
+        await client.query(
+            'UPDATE shuttles SET status = $1 WHERE id = $2',
+            ['active', shuttle.id]
+        );
+        
+        // Mark driver as active
+        activeDrivers.set(req.user.id, {
+            shuttleId: shuttle.id,
+            latitude: null,
+            longitude: null,
+            timestamp: Date.now(),
+            routeName: route_name || 'Campus Route'
+        });
+        
+        res.json({
+            success: true,
+            message: 'Ride started! Your location will be broadcast to students.',
+            shuttle: shuttle
+        });
+    } catch (error) {
+        console.error('Start ride error:', error);
+        res.status(500).json({ success: false, message: 'Error starting ride' });
+    } finally {
+        client.release();
+    }
+});
+
+// Driver updates location (called continuously while ride is active)
+app.post('/api/driver/update-location', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { latitude, longitude } = req.body;
+        
+        if (!latitude || !longitude) {
+            return res.status(400).json({ success: false, message: 'Location coordinates required' });
+        }
+        
+        // Check if driver has an active ride
+        const driverData = activeDrivers.get(req.user.id);
+        if (!driverData) {
+            return res.status(400).json({ success: false, message: 'No active ride. Start a ride first.' });
+        }
+        
+        // Update location in database
+        await client.query(
+            'UPDATE shuttles SET current_latitude = $1, current_longitude = $2 WHERE id = $3',
+            [latitude, longitude, driverData.shuttleId]
+        );
+        
+        // Update in-memory location
+        activeDrivers.set(req.user.id, {
+            ...driverData,
+            latitude,
+            longitude,
+            timestamp: Date.now()
+        });
+        
+        // Broadcast location to all connected students via Socket.IO
+        io.emit('shuttle_location_update', {
+            driverId: req.user.id,
+            shuttleId: driverData.shuttleId,
+            latitude,
+            longitude,
+            routeName: driverData.routeName,
+            timestamp: Date.now()
+        });
+        
+        res.json({
+            success: true,
+            message: 'Location updated and broadcast to students'
+        });
+    } catch (error) {
+        console.error('Update location error:', error);
+        res.status(500).json({ success: false, message: 'Error updating location' });
+    } finally {
+        client.release();
+    }
+});
+
+// Driver stops ride (stops broadcasting location)
+app.post('/api/driver/stop-ride', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const driverData = activeDrivers.get(req.user.id);
+        
+        if (!driverData) {
+            return res.status(400).json({ success: false, message: 'No active ride to stop' });
+        }
+        
+        // Update shuttle status to inactive
+        await client.query(
+            'UPDATE shuttles SET status = $1 WHERE id = $2',
+            ['inactive', driverData.shuttleId]
+        );
+        
+        // Remove from active drivers
+        activeDrivers.delete(req.user.id);
+        
+        // Notify students that shuttle is offline
+        io.emit('shuttle_offline', {
+            driverId: req.user.id,
+            shuttleId: driverData.shuttleId
+        });
+        
+        res.json({
+            success: true,
+            message: 'Ride stopped. Location broadcasting disabled.'
+        });
+    } catch (error) {
+        console.error('Stop ride error:', error);
+        res.status(500).json({ success: false, message: 'Error stopping ride' });
+    } finally {
+        client.release();
+    }
+});
+
+// Get all active shuttles (for students to see on map)
+app.get('/api/shuttles/active', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT s.id, s.vehicle_number, s.current_latitude, s.current_longitude, 
+                   s.status, u.name as driver_name, u.id as driver_id
+            FROM shuttles s
+            JOIN users u ON s.driver_id = u.id
+            WHERE s.status = 'active' AND s.current_latitude IS NOT NULL
+        `);
+        
+        // Enrich with real-time data from memory
+        const shuttles = result.rows.map(shuttle => {
+            const driverData = activeDrivers.get(shuttle.driver_id);
+            return {
+                ...shuttle,
+                latitude: driverData?.latitude || shuttle.current_latitude,
+                longitude: driverData?.longitude || shuttle.current_longitude,
+                routeName: driverData?.routeName || 'Campus Route',
+                lastUpdate: driverData?.timestamp || null
+            };
+        });
+        
+        res.json({
+            success: true,
+            shuttles: shuttles,
+            count: shuttles.length
+        });
+    } catch (error) {
+        console.error('Get active shuttles error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching shuttles' });
+    } finally {
+        client.release();
+    }
+});
+
+// Get driver's current ride status
+app.get('/api/driver/ride-status', authenticateToken, requireRole(['driver']), async (req, res) => {
+    try {
+        const driverData = activeDrivers.get(req.user.id);
+        
+        if (!driverData) {
+            return res.json({
+                success: true,
+                isActive: false,
+                message: 'No active ride'
+            });
+        }
+        
+        res.json({
+            success: true,
+            isActive: true,
+            shuttleId: driverData.shuttleId,
+            routeName: driverData.routeName,
+            latitude: driverData.latitude,
+            longitude: driverData.longitude,
+            lastUpdate: driverData.timestamp
+        });
+    } catch (error) {
+        console.error('Get ride status error:', error);
+        res.status(500).json({ success: false, message: 'Error getting ride status' });
+    }
+});
+
+// ============= END SHUTTLE TRACKING SYSTEM =============
+
 // Admin endpoints
 app.get('/api/admin/overview', authenticateToken, requireRole(['admin']), async (req, res) => {
     const client = await pool.connect();
