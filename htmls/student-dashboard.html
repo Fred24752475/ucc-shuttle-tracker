@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="../css/student-dashboard-extended.css">
     <link rel="stylesheet" href="../css/student-friends.css">
     <link rel="stylesheet" href="../css/ai-assistant-simple.css">
+    <link rel="stylesheet" href="../css/mobile-modern.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1565c0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -612,6 +613,29 @@
 
     <!-- Mobile Menu Overlay -->
     <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Modern Bottom Navigation (Mobile Only) -->
+    <nav class="bottom-nav">
+        <div class="nav-item-mobile active" data-section="dashboard">
+            <div class="nav-icon-mobile">🏠</div>
+            <span class="nav-label-mobile">Home</span>
+        </div>
+        <div class="nav-item-mobile" data-section="rides">
+            <div class="nav-icon-mobile">🚗</div>
+            <span class="nav-label-mobile">Rides</span>
+        </div>
+        <div class="nav-item-mobile center" data-section="map">
+            <div class="nav-icon-mobile">🗺️</div>
+        </div>
+        <div class="nav-item-mobile" data-section="messages">
+            <div class="nav-icon-mobile">💬</div>
+            <span class="nav-label-mobile">Messages</span>
+        </div>
+        <div class="nav-item-mobile" data-section="ai-assistant">
+            <div class="nav-icon-mobile">🤖</div>
+            <span class="nav-label-mobile">AI</span>
+        </div>
+    </nav>
 
     <!-- Map CSS -->
     <style>
@@ -1427,6 +1451,7 @@ function showMapError() {
     <script src="../js/api-config.js"></script>
     <script src="../js/dashboard-simple-working.js"></script>
     <script src="../js/student-friends.js"></script>
+    <script src="../js/mobile-navigation.js"></script>
 </body>
 
 </html>

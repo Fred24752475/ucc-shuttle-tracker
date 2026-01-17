@@ -459,6 +459,29 @@
     <!-- Mobile Menu Overlay -->
     <div class="mobile-overlay" id="mobileOverlay"></div>
 
+    <!-- Modern Bottom Navigation (Mobile Only) -->
+    <nav class="bottom-nav">
+        <div class="nav-item-mobile active" data-section="dashboard">
+            <div class="nav-icon-mobile">🏠</div>
+            <span class="nav-label-mobile">Home</span>
+        </div>
+        <div class="nav-item-mobile" data-section="trips">
+            <div class="nav-icon-mobile">🚗</div>
+            <span class="nav-label-mobile">Trips</span>
+        </div>
+        <div class="nav-item-mobile center" data-section="map">
+            <div class="nav-icon-mobile">🗺️</div>
+        </div>
+        <div class="nav-item-mobile" data-section="earnings">
+            <div class="nav-icon-mobile">💰</div>
+            <span class="nav-label-mobile">Earnings</span>
+        </div>
+        <div class="nav-item-mobile" data-section="profile">
+            <div class="nav-icon-mobile">👤</div>
+            <span class="nav-label-mobile">Profile</span>
+        </div>
+    </nav>
+
     <!-- JavaScript -->
     <script>
         // Inline minimal scripts to avoid CSP issues
@@ -466,6 +489,7 @@
     </script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/driver-dashboard-new.js"></script>
+    <script src="../js/mobile-navigation.js"></script>
     
 
 </body>

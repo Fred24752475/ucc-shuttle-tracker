@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Support Dashboard - UCC Shuttle Tracker</title>
     <link rel="stylesheet" href="../../css/support-dashboard.css">
+    <link rel="stylesheet" href="../../css/mobile-modern.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff9800">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -242,6 +243,30 @@
     <!-- Mobile Menu Overlay -->
     <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
+    <!-- Modern Bottom Navigation (Mobile Only) -->
+    <nav class="bottom-nav">
+        <div class="nav-item-mobile active" data-section="dashboard">
+            <div class="nav-icon-mobile">🏠</div>
+            <span class="nav-label-mobile">Home</span>
+        </div>
+        <div class="nav-item-mobile" data-section="tickets">
+            <div class="nav-icon-mobile">🎫</div>
+            <span class="nav-label-mobile">Tickets</span>
+        </div>
+        <div class="nav-item-mobile center" data-section="chat">
+            <div class="nav-icon-mobile">💬</div>
+        </div>
+        <div class="nav-item-mobile" data-section="reports">
+            <div class="nav-icon-mobile">📊</div>
+            <span class="nav-label-mobile">Reports</span>
+        </div>
+        <div class="nav-item-mobile" data-section="settings">
+            <div class="nav-icon-mobile">⚙️</div>
+            <span class="nav-label-mobile">Settings</span>
+        </div>
+    </nav>
+
     <script src="../../js/support-messaging.js"></script>
+    <script src="../../js/mobile-navigation.js"></script>
 </body>
 </html>
