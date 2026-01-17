@@ -109,17 +109,34 @@ class StudentFriendsSystem {
     async loadAllStudents() {
         try {
             const token = localStorage.getItem('ucc_token');
+            console.log('📚 Loading all students...');
+            
+            if (!token) {
+                console.error('❌ No token found');
+                this.showNotification('Please login first', 'error');
+                return;
+            }
+            
             const response = await fetch(`${API_CONFIG.API_URL}/api/students/all`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            
+            console.log('📡 Students API response status:', response.status);
+            
             const data = await response.json();
+            console.log('📦 Students data:', data);
             
             if (data.success) {
                 this.allStudents = data.students;
+                console.log(`✅ Loaded ${this.allStudents.length} students`);
                 this.displayStudentsList();
+            } else {
+                console.error('❌ Failed to load students:', data.message);
+                this.showNotification(data.message || 'Failed to load students', 'error');
             }
         } catch (error) {
-            console.error('Error loading students:', error);
+            console.error('❌ Error loading students:', error);
+            this.showNotification('Error loading students', 'error');
         }
     }
 
@@ -474,4 +491,5 @@ class StudentFriendsSystem {
 window.friendsSystem = null;
 document.addEventListener('DOMContentLoaded', () => {
     window.friendsSystem = new StudentFriendsSystem();
+    console.log('✅ Friends system created and ready');
 });
