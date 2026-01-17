@@ -303,7 +303,7 @@
         <main class="view-map-section" id="viewMapSection" style="display: none;">
             <div class="section-header">
                 <h2>🗺️ Campus Map</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -318,7 +318,7 @@
         <main class="start-trip-section" id="startTripSection" style="display: none;">
             <div class="section-header">
                 <h2>🗺️ Route Map</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -331,7 +331,7 @@
         <main class="active-route-section" id="activeRouteSection" style="display: none;">
             <div class="section-header">
                 <h2>🗺️ Active Route</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -348,7 +348,7 @@
         <main class="completed-trips-section" id="completedTripsSection" style="display: none;">
             <div class="section-header">
                 <h2>📊 Completed Trips</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -381,7 +381,7 @@
         <main class="notifications-section" id="notificationsSection" style="display: none;">
             <div class="section-header">
                 <h2>🔔 Notifications</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -394,7 +394,7 @@
         <main class="support-section" id="supportSection" style="display: none;">
             <div class="section-header">
                 <h2>🆘 Support</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -427,7 +427,7 @@
         <main class="profile-section" id="profileSection" style="display: none;">
             <div class="section-header">
                 <h2>👤 Profile</h2>
-                <button class="back-btn">
+                <button class="back-btn" onclick="navigateToSection('home')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
@@ -505,6 +505,26 @@
     <script>
         // Inline minimal scripts to avoid CSP issues
         console.log('Driver dashboard loading...');
+        
+        // Test navigation after page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Driver dashboard loaded');
+            
+            // Log all sections
+            const sections = ['homeSection', 'viewMapSection', 'activeRouteSection', 'completedTripsSection', 'notificationsSection', 'supportSection', 'profileSection'];
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                console.log(`Section ${id}:`, el ? '✅ Found' : '❌ Not found');
+            });
+            
+            // Log all nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            console.log(`Found ${navItems.length} navigation items`);
+            navItems.forEach((item, index) => {
+                const section = item.getAttribute('data-section');
+                console.log(`Nav ${index + 1}: ${section}`);
+            });
+        });
     </script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="../js/api-config.js"></script>
@@ -514,6 +534,55 @@
     <script src="../js/mobile-navigation.js"></script>
     
     <style>
+        /* Main Section Display Styles */
+        .dashboard-main,
+        .view-map-section,
+        .start-trip-section,
+        .active-route-section,
+        .completed-trips-section,
+        .notifications-section,
+        .support-section,
+        .profile-section {
+            width: 100%;
+            padding: 20px;
+            background: #f5f5f5;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .section-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .back-btn {
+            padding: 8px 16px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+        }
+        
         /* Tracking Status Card Styles */
         .tracking-status-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
