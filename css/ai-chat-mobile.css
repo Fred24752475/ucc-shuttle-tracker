@@ -19,9 +19,76 @@
         z-index: 1000;
     }
     
-    /* Show input container in AI section */
+    /* Force show input container in AI section */
+    #aiAssistantSection .ai-input-container,
     .ai-assistant-section .ai-input-container {
         display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: #16213e !important;
+        padding: 1rem !important;
+        border-top: 1px solid rgba(255,255,255,0.1) !important;
+        z-index: 1001 !important;
+    }
+    
+    /* Force show input wrapper */
+    #aiAssistantSection .ai-input-wrapper,
+    .ai-assistant-section .ai-input-wrapper,
+    #aiAssistantSection .input-wrapper,
+    .ai-assistant-section .input-wrapper {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        background: #2d3748 !important;
+        border-radius: 24px !important;
+        padding: 0.5rem 1rem !important;
+    }
+    
+    /* Force show input field */
+    #aiAssistantSection .ai-input-wrapper input,
+    .ai-assistant-section .ai-input-wrapper input,
+    #aiAssistantSection .input-wrapper input,
+    .ai-assistant-section .input-wrapper input,
+    #aiInput {
+        flex: 1 !important;
+        background: none !important;
+        border: none !important;
+        color: #fff !important;
+        font-size: 0.95rem !important;
+        padding: 0.5rem !important;
+        outline: none !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    #aiAssistantSection .ai-input-wrapper input::placeholder,
+    .ai-assistant-section .ai-input-wrapper input::placeholder,
+    #aiInput::placeholder {
+        color: rgba(255,255,255,0.5) !important;
+    }
+    
+    /* Force show send button */
+    #aiAssistantSection .ai-send-btn,
+    .ai-assistant-section .ai-send-btn,
+    #aiSendBtn {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+        color: #fff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        font-size: 1.2rem !important;
+        transition: transform 0.2s !important;
+        flex-shrink: 0 !important;
         visibility: visible !important;
         opacity: 1 !important;
     }
