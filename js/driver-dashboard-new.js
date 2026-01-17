@@ -77,6 +77,30 @@ function setupEventListeners() {
             });
         }
     });
+    
+    // Mobile Navigation - Handle bottom nav clicks
+    const mobileNavItems = document.querySelectorAll('.nav-item-mobile');
+    console.log(`  Found ${mobileNavItems.length} mobile navigation items`);
+    
+    mobileNavItems.forEach((item, index) => {
+        const section = item.getAttribute('data-section');
+        console.log(`  Mobile Nav ${index + 1}: ${section}`);
+        
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const section = this.getAttribute('data-section');
+            console.log('📱 Mobile nav clicked:', section);
+            
+            // Remove active from all mobile nav items
+            mobileNavItems.forEach(nav => nav.classList.remove('active'));
+            // Add active to clicked item
+            this.classList.add('active');
+            
+            // Navigate to section
+            navigateToSection(section);
+        });
+    });
 
     // Action cards - Direct event listeners with ETA functionality
     document.querySelectorAll('.action-card').forEach(card => {
