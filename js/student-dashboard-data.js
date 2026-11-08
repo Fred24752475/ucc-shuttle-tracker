@@ -140,14 +140,21 @@ async function loadRidesData() {
     }
 }
 
-window.showBookingForm = async function () {
-    const pickup = window.prompt('Pickup location', 'Main Gate');
-    if (!pickup) return;
-    const destination = window.prompt('Destination', 'Library');
-    if (!destination) return;
-    await bookRide({ pickup_location: pickup, destination });
-    if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
+window.showBookingForm = function () {
+    const form = document.getElementById('bookRideForm');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('bookRideForm');
+    if (!form) return;
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const pickup = document.getElementById('bookPickup').value;
+        const destination = document.getElementById('bookDestination').value;
+        await bookRide({ pickup_location: pickup, destination });
+    });
+});
 
 // Book a ride
 async function bookRide(formData) {
@@ -158,11 +165,13 @@ async function bookRide(formData) {
         });
 
         if (data.success) {
-            alert('✅ Ride booked successfully!');
-            loadRidesData();
+            if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
+            else loadRidesData();
+        } else {
+            alert(data.message || 'Could not book that ride');
         }
     } catch (error) {
-        alert('❌ Error booking ride: ' + error.message);
+        alert(error.message);
     }
 }
 
@@ -216,6 +225,8 @@ async function loadTripHistoryData(filters = {}) {
         }
     } catch (error) {
         console.error('Error loading trip history:', error);
+        const historyList = document.getElementById('historyList');
+        if (historyList) historyList.innerHTML = '<p style="padding:20px;">Could not load trips. Please try again.</p>';
     }
 }
 

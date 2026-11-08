@@ -497,6 +497,49 @@ input:focus, select:focus, textarea:focus {
     .main-content { margin-left: 0 !important; }
 }
 
+.book-ride-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.book-ride-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.book-ride-form select, .history-filters select { width: 100%; }
+.ride-card, .history-card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+.ride-status, .history-status {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 650;
+    background: #e8f3fc;
+    color: #083e75;
+}
+.ride-status.cancelled, .history-status.cancelled { background: #fef3f2; color: #b42318; }
+.ride-status.completed, .history-status.completed { background: #e7f6ee; color: #067647; }
+.btn-cancel {
+    margin-top: 10px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+@media (max-width: 700px) {
+    .book-ride-form { grid-template-columns: 1fr; }
+}
+
 .phone-menu { display: none; }
 
 @media (max-width: 900px) {

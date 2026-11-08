@@ -147,6 +147,12 @@ window.StudentDashboardSimple = {
             case 'map':
                 this.loadSimpleMap();
                 break;
+            case 'rides':
+                if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
+                break;
+            case 'history':
+                if (typeof loadTripHistory === 'function') loadTripHistory('all');
+                break;
             default:
                 break;
         }

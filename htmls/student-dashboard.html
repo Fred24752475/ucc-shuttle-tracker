@@ -486,6 +486,31 @@
                 </button>
             </div>
             <div class="rides-content">
+                <form id="bookRideForm" class="book-ride-form">
+                    <label>Pickup
+                        <select id="bookPickup" required>
+                            <option>West Gate</option>
+                            <option>East Gate</option>
+                            <option>Administration</option>
+                            <option>Science</option>
+                            <option>Library</option>
+                            <option>Hospital</option>
+                            <option>Halls</option>
+                        </select>
+                    </label>
+                    <label>Destination
+                        <select id="bookDestination" required>
+                            <option>Administration</option>
+                            <option>Science</option>
+                            <option>Library</option>
+                            <option>Hospital</option>
+                            <option>Halls</option>
+                            <option>West Gate</option>
+                            <option>East Gate</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn-primary">Book a Ride</button>
+                </form>
                 <div class="ride-tabs">
                     <button class="tab-btn active" onclick="switchRideTab('upcoming')">Upcoming Rides</button>
                     <button class="tab-btn" onclick="switchRideTab('history')">Ride History</button>

@@ -1233,14 +1233,26 @@ app.get('/api/rides', authenticateToken, async (req, res) => {
 app.post('/api/rides/book', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        const pickup = req.body.pickup_location || req.body.pickup || 'Main Gate';
-        const destination = req.body.destination || 'Library';
+        const pickup = req.body.pickup_location || req.body.pickup || 'West Gate';
+        const destination = req.body.destination || 'Administration';
+        if (pickup === destination) {
+            return res.status(400).json({ success: false, message: 'Pick a different destination' });
+        }
+        const driver = await client.query(`SELECT id FROM users WHERE role = 'driver' ORDER BY id LIMIT 1`);
+        const shuttle = await client.query(`SELECT id FROM shuttles ORDER BY id LIMIT 1`);
         const result = await client.query(
-            `INSERT INTO trips (student_id, pickup_location, destination, fare, status)
-             VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
-            [req.user.id, pickup, destination, req.body.fare || 2]
+            `INSERT INTO trips (student_id, driver_id, shuttle_id, pickup_location, destination, fare, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'confirmed') RETURNING *`,
+            [req.user.id, driver.rows[0]?.id || null, shuttle.rows[0]?.id || null, pickup, destination, 2]
         );
-        res.json({ success: true, ride: result.rows[0], message: 'Ride booked' });
+        const full = await client.query(`
+            SELECT t.*, u.name AS driver_name, s.vehicle_number AS shuttle_number
+            FROM trips t
+            LEFT JOIN users u ON u.id = t.driver_id
+            LEFT JOIN shuttles s ON s.id = t.shuttle_id
+            WHERE t.id = $1
+        `, [result.rows[0].id]);
+        res.json({ success: true, ride: full.rows[0], message: 'Ride booked' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Could not book ride' });
     } finally {
@@ -1267,14 +1279,23 @@ app.delete('/api/rides/:id', authenticateToken, async (req, res) => {
 app.get('/api/trips/history', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        const result = await client.query(`
+        const status = req.query.status;
+        const params = [req.user.id];
+        let sql = `
             SELECT t.*, u.name AS driver_name, s.vehicle_number AS shuttle_number
             FROM trips t
             LEFT JOIN users u ON u.id = t.driver_id
             LEFT JOIN shuttles s ON s.id = t.shuttle_id
             WHERE t.student_id = $1
-            ORDER BY t.created_at DESC
-        `, [req.user.id]);
+        `;
+        if (status === 'completed' || status === 'cancelled' || status === 'confirmed' || status === 'pending') {
+            params.push(status);
+            sql += ` AND t.status = $${params.length}`;
+        } else if (status === 'last30') {
+            sql += ` AND t.created_at >= NOW() - INTERVAL '30 days'`;
+        }
+        sql += ' ORDER BY t.created_at DESC';
+        const result = await client.query(sql, params);
         res.json({ success: true, trips: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });
