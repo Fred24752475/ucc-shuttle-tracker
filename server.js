@@ -147,15 +147,13 @@ const avatarUpload = multer({
 });
 
 function publicAccount(user) {
-    const email = String(user.email || '').trim().toLowerCase();
-    const hash = crypto.createHash('md5').update(email).digest('hex');
     return {
         id: user.id,
         name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role,
-        profileImage: user.profile_image || `https://www.gravatar.com/avatar/${hash}?d=identicon&s=240`
+        profileImage: user.profile_image || '/images/default-user.svg'
     };
 }
 

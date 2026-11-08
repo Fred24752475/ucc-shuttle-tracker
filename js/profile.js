@@ -3,10 +3,13 @@ function savedAccount() {
     catch (error) { return null; }
 }
 
+const DEFAULT_USER_ICON = '/images/default-user.svg';
+
 function paintAccountPhoto(url) {
-    if (!url) return;
+    const photo = url && !/gravatar\.com|ui-avatars\.com/.test(url) ? url : DEFAULT_USER_ICON;
     document.querySelectorAll('.user-avatar img, .profile-avatar img, #profileAvatar').forEach((img) => {
-        img.src = url;
+        img.src = photo;
+        img.onerror = () => { img.onerror = null; img.src = DEFAULT_USER_ICON; };
     });
 }
 

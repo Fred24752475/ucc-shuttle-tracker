@@ -151,9 +151,11 @@
         if (!el || typeof L === 'undefined') return null;
         ensureStyle();
         if (el.querySelector('.simple-map-placeholder')) el.innerHTML = '';
+        const compact = window.matchMedia('(max-width: 900px)').matches;
         el.style.setProperty('width', '100%', 'important');
-        el.style.setProperty('height', 'min(68vh, 520px)', 'important');
-        el.style.setProperty('min-height', '280px', 'important');
+        el.style.setProperty('height', compact ? '260px' : 'min(68vh, 520px)', 'important');
+        el.style.setProperty('min-height', compact ? '260px' : '320px', 'important');
+        el.style.setProperty('max-height', 'none', 'important');
         el.style.setProperty('background', 'transparent', 'important');
         if (!maps[containerId]) {
             const map = L.map(el, { zoomControl: true }).setView([5.116, -1.289], 15);
@@ -175,6 +177,7 @@
             const map = maps[containerId];
             if (!map) return;
             map.invalidateSize();
+            map.fitBounds(L.latLngBounds([5.104, -1.302], [5.134, -1.272]), { padding: [16, 16] });
         };
         requestAnimationFrame(redraw);
         setTimeout(redraw, 120);

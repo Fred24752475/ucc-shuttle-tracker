@@ -39,7 +39,6 @@ async function apiRequest(endpoint, options = {}) {
 // ============= MY DASHBOARD DATA LOADING =============
 async function loadDashboardData() {
     try {
-        // Load profile for name
         const profileData = await apiRequest('/student/profile');
         if (profileData.success && profileData.profile) {
             const fullName = profileData.profile.name;
@@ -48,48 +47,44 @@ async function loadDashboardData() {
             if (studentName && fullName) studentName.textContent = fullName;
             if (userName && fullName) userName.textContent = fullName;
         }
-
-        // Load active shuttles count
-        const shuttlesData = await apiRequest('/shuttles');
-        if (shuttlesData.success) {
-            const activeCount = shuttlesData.shuttles.filter(s => s.status === 'active').length;
-            const countEl = document.getElementById('activeShuttlesCount');
-            if (countEl) countEl.textContent = activeCount;
-        }
-
-        // Load today's trips
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+    try {
         const ridesData = await apiRequest('/rides?status=active');
         if (ridesData.success) {
             const tripsEl = document.getElementById('todayTripsCount');
             if (tripsEl) tripsEl.textContent = ridesData.rides.length;
         }
-
-        // Load shuttle list
-        loadShuttleList();
-
     } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error('Error loading trips:', error);
     }
+    await loadShuttleList();
 }
 
 async function loadShuttleList() {
+    const shuttleList = document.getElementById('shuttleList');
     try {
-        const data = await apiRequest('/shuttles');
-        const shuttleList = document.getElementById('shuttleList');
-
-        if (data.success && data.shuttles && shuttleList) {
-            shuttleList.innerHTML = data.shuttles.map(shuttle => `
-                <div class="shuttle-item">
-                    <div class="shuttle-icon">🚌</div>
-                    <div class="shuttle-info">
-                        <span class="shuttle-name">${shuttle.vehicle_number || 'Shuttle ' + shuttle.id}</span>
-                        <span class="shuttle-status ${shuttle.status}">${shuttle.status || 'offline'}</span>
-                    </div>
-                </div>
-            `).join('');
+        const data = await apiRequest('/shuttles/active');
+        const shuttles = (data && data.shuttles) || [];
+        const countEl = document.getElementById('activeShuttlesCount');
+        if (countEl) countEl.textContent = shuttles.length;
+        if (!shuttleList) return;
+        if (!shuttles.length) {
+            shuttleList.innerHTML = '<p class="shuttle-empty">No shuttle is on the road right now.</p>';
+            return;
         }
+        shuttleList.innerHTML = shuttles.map((shuttle) => `
+            <div class="shuttle-item">
+                <div class="shuttle-info">
+                    <span class="shuttle-name">${ticketText(shuttle.vehicle_number || shuttle.vehicleNumber || 'Shuttle')}</span>
+                    <span class="shuttle-route">${ticketText(shuttle.routeName || 'Campus Express')} · ${ticketText(shuttle.driver_name || shuttle.driverName || 'Driver')}</span>
+                </div>
+                <span class="shuttle-status active">On road</span>
+            </div>
+        `).join('');
     } catch (error) {
-        console.error('Error loading shuttle list:', error);
+        if (shuttleList) shuttleList.innerHTML = '<p class="shuttle-empty">Shuttles could not be loaded. Pull to refresh.</p>';
     }
 }
 

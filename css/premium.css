@@ -1178,9 +1178,9 @@ input:focus, select:focus, textarea:focus {
     #dashboardMain .widgets-grid {
         grid-template-columns: 1fr 1fr !important;
         grid-template-areas:
-            "trip history"
+            "shuttle shuttle"
             "map map"
-            "shuttle shuttle" !important;
+            "trip history" !important;
     }
     #dashboardMain .widget-header { padding: 12px !important; flex-wrap: nowrap; }
     #dashboardMain .widget-header h3 { font-size: 13px !important; line-height: 1.2; }
@@ -1196,9 +1196,28 @@ input:focus, select:focus, textarea:focus {
     #dashboardMain .current-trip-info { gap: 8px !important; }
     #dashboardMain .trip-summary { gap: 10px !important; margin-bottom: 10px !important; }
     #dashboardMain .summary-number { font-size: 22px !important; }
-    #dashboardMain .map-widget { max-height: 360px; overflow: hidden; }
+    #dashboardMain .map-widget { max-height: none; overflow: visible; }
     #dashboardMain #liveMap,
-    #dashboardMain .leaflet-container { min-height: 0 !important; height: 220px !important; max-height: 220px !important; }
+    #dashboardMain .map-widget .leaflet-container {
+        min-height: 260px !important;
+        height: 260px !important;
+        max-height: none !important;
+    }
+    #dashboardMain .shuttle-list {
+        max-height: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    #dashboardMain .shuttle-item {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+    #dashboardMain .shuttle-info { display: flex; flex-direction: column; min-width: 0; }
+    #dashboardMain .shuttle-route { color: #667085; font-size: 12px; }
+    #dashboardMain .shuttle-empty { margin: 0; color: #667085; font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

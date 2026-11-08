@@ -183,7 +183,7 @@ class StudentFriendsSystem {
             : '';
         return `
             <div class="student-card wa-row" data-name="${this.esc(person.name)}" ${add || disabled ? '' : `data-open="${open}"`}>
-                <img src="${this.esc(person.profileImage)}" alt="">
+                <img src="${this.esc(person.profileImage || '/images/default-user.svg')}" alt="" onerror="this.onerror=null;this.src='/images/default-user.svg'">
                 <div class="wa-row-body">
                     <div class="wa-row-top">
                         <strong>${this.esc(person.name)}</strong>
@@ -202,7 +202,7 @@ class StudentFriendsSystem {
     requestRow(person) {
         return `
             <div class="friend-request-card">
-                <div class="request-avatar"><img src="${this.esc(person.profileImage)}" alt=""></div>
+                <div class="request-avatar"><img src="${this.esc(person.profileImage || '/images/default-user.svg')}" alt="" onerror="this.onerror=null;this.src='/images/default-user.svg'"></div>
                 <div class="request-info">
                     <h4>${this.esc(person.name)}</h4>
                     <p>Wants to chat</p>
@@ -252,7 +252,7 @@ class StudentFriendsSystem {
         document.getElementById('chatHeader').innerHTML = `
             <div class="chat-header-content">
                 <button type="button" class="chat-back" id="chatBackBtn" aria-label="Back">‹</button>
-                <img src="${this.esc(person.profileImage)}" alt="" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(person.name || 'U')}&background=dfe5e7&color=111b21&size=80'">
+                <img src="${this.esc(person.profileImage || '/images/default-user.svg')}" alt="" onerror="this.onerror=null;this.src='/images/default-user.svg'">
                 <div>
                     <h3>${this.esc(person.name)}</h3>
                     <p>${person.online ? 'online' : this.esc(person.role === 'driver' ? 'Driver' : 'Student')}</p>
