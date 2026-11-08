@@ -2235,6 +2235,69 @@ app.post('/api/admin/settings', authenticateToken, requireRole(['admin']), async
     }
 });
 
+app.post('/api/ai/chat', authenticateToken, async (req, res) => {
+    const message = String(req.body.message || '').trim().slice(0, 1000);
+    if (!message) return res.status(400).json({ success: false, message: 'Type a message first.' });
+    if (!process.env.GROQ_API_KEY) {
+        return res.status(503).json({ success: false, message: 'The assistant is not available right now. Try again later.' });
+    }
+    const client = await pool.connect();
+    try {
+        const account = await client.query('SELECT name, role FROM users WHERE id = $1', [req.user.id]);
+        const person = account.rows[0] || { name: 'there', role: req.user.role };
+        let rides = [];
+        if (person.role === 'student') {
+            const mine = await client.query(
+                `SELECT pickup_location, destination, status FROM trips WHERE student_id = $1 ORDER BY created_at DESC LIMIT 5`,
+                [req.user.id]
+            );
+            rides = mine.rows;
+        }
+        const buses = [...demoFleet.values()].map((bus) => `${bus.vehicleNumber}, driver ${bus.driverName}, route ${bus.routeName}`);
+        const history = Array.isArray(req.body.history) ? req.body.history.slice(-8) : [];
+        const prior = history
+            .filter((item) => item && (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string')
+            .map((item) => ({ role: item.role, content: item.content.slice(0, 800) }));
+        const system = [
+            'You are the assistant inside the UCC Shuttle Tracker for the University of Cape Coast. Write plain sentences. Do not use markdown, asterisks, or code.',
+            'Answer only about this app. Be short, plain, and practical. Tell the person which screen to open.',
+            'Students can book a ride from My Rides. Pickup and destination are West Gate, East Gate, Administration, Science, Library, Hospital, or Halls. The two stops must be different. A booked ride costs 2 cedis.',
+            'The map uses OpenStreetMap and shows the student plus buses moving on the UCC campus. Open it from Map in the sidebar or the middle button on the phone.',
+            'Messages: a student adds another student, and chat starts only after that person accepts. A student can message a driver immediately from the Drivers tab. Admins are not in chat.',
+            'Profile is for name, phone, department, a photo, and changing the password. If no photo is uploaded, the picture follows the email address.',
+            'New student and driver accounts, and password resets, start with an email. A 6-digit code arrives by email and is typed into six boxes. Do not mention any app password.',
+            'Drivers start and stop a route, share their location, reply to students, and update their profile.',
+            'The emergency button on the student dashboard sends an alert. A pickup spot can be saved from the dashboard.',
+            'Do not invent phone numbers, room numbers, prices, or schedules. Do not reveal passwords, codes, tokens, or how the server is built.',
+            `The signed-in person is ${person.name}, a ${person.role}.`,
+            buses.length ? `Buses on campus right now: ${buses.join('; ')}.` : 'No buses are listed right now. Tell them to open the map.',
+            rides.length ? `Their latest rides: ${rides.map((ride) => `${ride.status} from ${ride.pickup_location} to ${ride.destination}`).join('; ')}.` : 'They have no saved rides yet.'
+        ].join(' ');
+        const groq = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'openai/gpt-oss-20b',
+                temperature: 0.3,
+                max_tokens: 800,
+                messages: [{ role: 'system', content: system }, ...prior, { role: 'user', content: message }]
+            })
+        });
+        const data = await groq.json();
+        const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (!text) return res.status(502).json({ success: false, message: 'The assistant could not answer just now. Try again.' });
+        res.json({ success: true, response: text.trim() });
+    } catch (error) {
+        console.error('Assistant request failed');
+        res.status(502).json({ success: false, message: 'The assistant could not answer just now. Try again.' });
+    } finally {
+        client.release();
+    }
+});
+
 app.use((err, req, res, next) => {
     console.error('Request failed');
     if (res.headersSent) return next(err);
