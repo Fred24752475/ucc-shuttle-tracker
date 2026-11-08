@@ -604,7 +604,17 @@ input:focus, select:focus, textarea:focus {
     .book-ride-form { grid-template-columns: 1fr; }
 }
 
-.phone-menu { display: none; }
+.phone-menu, .phone-logout { display: none; }
+
+.phone-logout {
+    border: 1px solid #f3c3bd;
+    background: white;
+    color: #b42318;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
 
 @media (max-width: 900px) {
     html, body {
@@ -622,6 +632,15 @@ input:focus, select:focus, textarea:focus {
     }
 
     body.admin-app .sidebar.open { transform: none !important; }
+
+    .phone-logout {
+        display: inline-flex !important;
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 70;
+        align-items: center;
+    }
 
     .phone-menu {
         display: inline-flex !important;

@@ -11,6 +11,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/../css/all.min.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        .phone-logout { display: none; }
+        @media (max-width: 900px) {
+            .phone-logout {
+                display: inline-flex;
+                position: fixed;
+                top: 12px;
+                right: 12px;
+                z-index: 70;
+                border: 1px solid #f3c3bd;
+                background: white;
+                color: #b42318;
+                border-radius: 999px;
+                padding: 8px 14px;
+                font-weight: 700;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar Navigation -->
@@ -80,6 +98,7 @@
 
     <!-- Main Content Area -->
     <div class="main-content">
+        <button class="phone-logout" type="button" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}">Log out</button>
         <!-- Top Header -->
         <header class="top-header">
             <div class="header-content">
