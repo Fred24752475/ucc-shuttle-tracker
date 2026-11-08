@@ -36,8 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => friendsSystem.init(), 100);
                 }
                 
-                if (sectionName === 'map' && window.initializeSimpleMap) {
-                    setTimeout(() => window.initializeSimpleMap(), 100);
+                if (sectionName === 'map' && window.CampusLiveMap) {
+                    setTimeout(() => window.CampusLiveMap.attach('studentShuttleMap'), 60);
+                }
+                if (sectionName === 'view-map' && window.CampusLiveMap) {
+                    setTimeout(() => window.CampusLiveMap.attach('driverMap'), 60);
                 }
             }
             

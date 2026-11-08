@@ -270,7 +270,8 @@ body {
     box-shadow: none !important;
     background: transparent !important;
 }
-.map-content, .map-section { background: transparent !important; }
+.map-content, .map-section { background: transparent !important; min-height: 0 !important; height: auto !important; }
+.leaflet-div-icon.campus-car-icon { background: transparent !important; border: none !important; }
 
 .bottom-nav {
     background: rgba(255, 255, 255, 0.92) !important;
@@ -279,13 +280,45 @@ body {
     box-shadow: none !important;
 }
 
-.nav-item-mobile { color: var(--ink-soft) !important; }
-.nav-item-mobile.active { color: var(--accent) !important; }
+.bottom-nav {
+    background: #ffffff !important;
+    border-top: 1px solid #e6e8eb !important;
+    box-shadow: 0 -10px 30px rgba(16, 24, 40, 0.06) !important;
+}
+.nav-item-mobile {
+    background: transparent !important;
+    color: #667085 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+.nav-icon-mobile {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 14px !important;
+    background: transparent !important;
+    color: #667085 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+.nav-item-mobile.active { color: #0a66c2 !important; }
+.nav-item-mobile.active .nav-icon-mobile {
+    background: #e8f3fc !important;
+    color: #0a66c2 !important;
+}
 .nav-item-mobile svg { width: 22px; height: 22px; }
 .nav-item-mobile.center {
-    background: var(--ink) !important;
-    color: white !important;
-    box-shadow: 0 8px 20px rgba(16, 17, 20, 0.28);
+    background: transparent !important;
+    margin-top: -22px !important;
+    box-shadow: none !important;
+}
+.nav-item-mobile.center .nav-icon-mobile {
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 50% !important;
+    background: #128a3a !important;
+    color: #fff !important;
+    box-shadow: 0 10px 22px rgba(18, 138, 58, 0.35) !important;
 }
 
 .notification-badge {

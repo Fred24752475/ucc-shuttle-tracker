@@ -151,9 +151,10 @@
         if (!el || typeof L === 'undefined') return null;
         ensureStyle();
         if (el.querySelector('.simple-map-placeholder')) el.innerHTML = '';
-        el.style.setProperty('height', '420px', 'important');
         el.style.setProperty('width', '100%', 'important');
-        el.style.setProperty('min-height', '420px', 'important');
+        el.style.setProperty('height', 'min(68vh, 520px)', 'important');
+        el.style.setProperty('min-height', '280px', 'important');
+        el.style.setProperty('background', 'transparent', 'important');
         if (!maps[containerId]) {
             const map = L.map(el, { zoomControl: true }).setView([5.116, -1.289], 15);
             const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -170,7 +171,14 @@
             map.fitBounds(campus, { padding: [16, 16] });
             pinSignedInUser(map);
         }
-        setTimeout(() => maps[containerId].invalidateSize(), 200);
+        const redraw = () => {
+            const map = maps[containerId];
+            if (!map) return;
+            map.invalidateSize();
+        };
+        requestAnimationFrame(redraw);
+        setTimeout(redraw, 120);
+        setTimeout(redraw, 400);
         bindSocket();
         refresh();
         return maps[containerId];
