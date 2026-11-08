@@ -93,6 +93,38 @@ async function loadShuttleList() {
     }
 }
 
+function ticketText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+}
+
+window.renderRideTicket = function (ride, allowCancel) {
+    const when = new Date(ride.created_at);
+    const date = when.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    const time = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const status = String(ride.status || 'pending');
+    const fare = Number(ride.fare || 0).toFixed(2);
+    const canCancel = allowCancel && status !== 'completed' && status !== 'cancelled';
+    return `
+        <article class="ticket ${ticketText(status)}">
+            <header class="ticket-top">
+                <span class="ticket-status ${ticketText(status)}">${ticketText(status)}</span>
+                <strong class="ticket-fare">GH₵${fare}</strong>
+            </header>
+            <p class="ticket-when">${date} · ${time} <span>#${ticketText(ride.id)}</span></p>
+            <div class="ticket-route">
+                <div><i></i><b>${ticketText(ride.pickup_location || 'Pickup')}</b></div>
+                <div><i></i><b>${ticketText(ride.destination || 'Destination')}</b></div>
+            </div>
+            <footer class="ticket-meta">
+                <span>${ticketText(ride.driver_name || 'Driver')}</span>
+                <span>${ticketText(ride.shuttle_number || ride.vehicle_number || 'Shuttle')}</span>
+                ${canCancel ? `<button type="button" class="ticket-cancel" onclick="cancelRide(${Number(ride.id)})">Cancel</button>` : ''}
+            </footer>
+        </article>`;
+};
+
 // ============= MY RIDES DATA LOADING =============
 async function loadRidesData() {
     try {
@@ -100,32 +132,7 @@ async function loadRidesData() {
         const ridesList = document.getElementById('ridesList');
 
         if (data.success && data.rides && data.rides.length > 0) {
-            ridesList.innerHTML = data.rides.map(ride => `
-                <div class="ride-card">
-                    <div class="ride-header">
-                        <span class="ride-status ${ride.status}">${ride.status}</span>
-                        <span class="ride-id">#${ride.id}</span>
-                    </div>
-                    <div class="ride-details">
-                        <div class="ride-route">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>${ride.pickup_location} → ${ride.destination}</span>
-                        </div>
-                        ${ride.driver_name ? `<div class="ride-driver">
-                            <i class="fas fa-user"></i>
-                            <span>Driver: ${ride.driver_name}</span>
-                        </div>` : ''}
-                        <div class="ride-time">
-                            <i class="fas fa-clock"></i>
-                            <span>${new Date(ride.created_at).toLocaleString()}</span>
-                        </div>
-                    </div>
-                    <div class="ride-actions">
-                        ${ride.status !== 'completed' && ride.status !== 'cancelled' ?
-                    `<button class="btn-cancel" onclick="cancelRide(${ride.id})">Cancel</button>` : ''}
-                    </div>
-                </div>
-            `).join('');
+            ridesList.innerHTML = data.rides.map((ride) => window.renderRideTicket(ride, true)).join('');
         } else {
             ridesList.innerHTML = `
                 <div class="empty-state">
@@ -199,22 +206,7 @@ async function loadTripHistoryData(filters = {}) {
         const historyList = document.getElementById('historyList');
 
         if (data.success && data.trips && data.trips.length > 0) {
-            historyList.innerHTML = data.trips.map(trip => `
-                <div class="history-card">
-                    <div class="history-header">
-                        <span class="history-date">${new Date(trip.created_at).toLocaleDateString()}</span>
-                        <span class="history-status ${trip.status}">${trip.status}</span>
-                    </div>
-                    <div class="history-details">
-                        <div class="history-route">
-                            <strong>${trip.pickup_location}</strong> → <strong>${trip.destination}</strong>
-                        </div>
-                        ${trip.driver_name ? `<div>Driver: ${trip.driver_name}</div>` : ''}
-                        ${trip.shuttle_number ? `<div>Shuttle: ${trip.shuttle_number}</div>` : ''}
-                        <div>Fare: GH₵${trip.fare}</div>
-                    </div>
-                </div>
-            `).join('');
+            historyList.innerHTML = data.trips.map((trip) => window.renderRideTicket(trip, false)).join('');
         } else {
             historyList.innerHTML = `
                 <div class="empty-state">

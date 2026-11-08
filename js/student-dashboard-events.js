@@ -619,20 +619,7 @@ async function loadRidesForTab(tabType) {
             `;
             return;
         }
-        ridesList.innerHTML = data.rides.map(ride => `
-            <div class="ride-card">
-                <div class="ride-header">
-                    <span class="ride-status ${ride.status}">${ride.status}</span>
-                    <span class="ride-id">#${ride.id}</span>
-                </div>
-                <div class="ride-details">
-                    <div class="ride-route">${ride.pickup_location} → ${ride.destination}</div>
-                    <div class="ride-time">${new Date(ride.created_at).toLocaleString()}</div>
-                </div>
-                ${ride.status !== 'completed' && ride.status !== 'cancelled'
-                    ? `<button class="btn-cancel" onclick="cancelRide(${ride.id})">Cancel</button>` : ''}
-            </div>
-        `).join('');
+        ridesList.innerHTML = data.rides.map((ride) => window.renderRideTicket(ride, tabType === 'upcoming')).join('');
     } catch (error) {
         ridesList.innerHTML = '<p style="padding:20px;">Could not load rides. Please refresh.</p>';
     }

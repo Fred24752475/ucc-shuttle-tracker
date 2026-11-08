@@ -574,6 +574,72 @@ input:focus, select:focus, textarea:focus {
 }
 .book-ride-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
 .book-ride-form select, .history-filters select { width: 100%; }
+.rides-list, .history-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+.ticket {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 18px;
+    padding: 14px;
+    min-width: 0;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+}
+.ticket-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ticket-status {
+    text-transform: capitalize;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 4px 10px;
+    background: #e7f6ee;
+    color: #067647;
+}
+.ticket-status.pending { background: #fffaeb; color: #b54708; }
+.ticket-status.cancelled { background: #fef3f2; color: #b42318; }
+.ticket-status.completed { background: #f2f4f7; color: #344054; }
+.ticket-fare { font-size: 16px; color: #101828; }
+.ticket-when { margin: 8px 0 12px; color: #667085; font-size: 13px; }
+.ticket-when span { color: #98a2b3; }
+.ticket-route { display: grid; gap: 10px; }
+.ticket-route div { display: flex; align-items: center; gap: 10px; min-width: 0; position: relative; }
+.ticket-route b { font-size: 15px; color: #101828; overflow-wrap: anywhere; }
+.ticket-route i { width: 10px; height: 10px; border-radius: 50%; background: #128a3a; flex: 0 0 10px; }
+.ticket-route div:last-child i { background: #101828; }
+.ticket-route div:first-child::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 16px;
+    width: 2px;
+    height: 18px;
+    background: #d0d5dd;
+}
+.ticket-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed #e6e8ec;
+    color: #344054;
+    font-size: 13px;
+}
+.ticket-meta span { background: #f6f7f9; border-radius: 999px; padding: 4px 8px; }
+.ticket-cancel {
+    margin-left: auto;
+    border: 0;
+    background: #fef3f2;
+    color: #b42318;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
 .ride-card, .history-card {
     background: white;
     border: 1px solid var(--line);
@@ -602,6 +668,8 @@ input:focus, select:focus, textarea:focus {
 }
 @media (max-width: 700px) {
     .book-ride-form { grid-template-columns: 1fr; }
+    .rides-list, .history-list { grid-template-columns: 1fr; }
+    .ticket-cancel { margin-left: 0; }
 }
 
 .phone-menu, .phone-logout { display: none; }
