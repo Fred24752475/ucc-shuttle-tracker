@@ -254,6 +254,51 @@ async function deliverCode(to, code, purpose) {
     throw lastError || new Error('Email was not accepted');
 }
 
+function supabaseKey() {
+    return process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+}
+
+async function requestSupabaseCode(email) {
+    const base = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+    const key = supabaseKey();
+    if (!base || !key) throw new Error('Email is not configured');
+    const response = await fetch(base + '/auth/v1/otp', {
+        method: 'POST',
+        headers: {
+            apikey: key,
+            Authorization: 'Bearer ' + key,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, create_user: true })
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const message = String(data.msg || data.message || data.error_description || '');
+        if (/rate|once every|too many/i.test(message)) {
+            const error = new Error('wait');
+            error.code = 'WAIT';
+            throw error;
+        }
+        throw new Error('Email was not accepted');
+    }
+}
+
+async function verifySupabaseCode(email, token) {
+    const base = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+    const key = supabaseKey();
+    if (!base || !key || String(token || '').length !== 6) return false;
+    const response = await fetch(base + '/auth/v1/verify', {
+        method: 'POST',
+        headers: {
+            apikey: key,
+            Authorization: 'Bearer ' + key,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, token, type: 'email' })
+    });
+    return response.ok;
+}
+
 // Auth middleware
 function authenticateToken(req, res, next) {
     const token = req.headers['authorization']?.split(' ')[1];
@@ -358,6 +403,7 @@ async function registrationAllowed(client, req, res) {
         return null;
     }
     const code = String(req.body.code || '').replace(/\D/g, '');
+    if (await verifySupabaseCode(email, code)) return { email, role };
     const match = await client.query(`
         SELECT id FROM email_verifications
         WHERE lower(email) = $1 AND code = $2 AND purpose = 'signup'
@@ -439,7 +485,6 @@ async function sendEmailCode(req, res) {
         const email = String(req.body.email || '').trim().toLowerCase();
         const purpose = req.body.purpose === 'signup' ? 'signup' : 'reset';
         if (!email || !email.includes('@')) return res.status(400).json({ success: false, message: 'Enter the email address you want the code sent to' });
-        let userId = null;
         if (purpose === 'signup') {
             const existing = await client.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
             if (existing.rows[0]) return res.status(400).json({ success: false, message: 'This email already has an account. Sign in, or reset the password.' });
@@ -449,39 +494,26 @@ async function sendEmailCode(req, res) {
             if (existing.rows[0].role === 'admin') {
                 return res.status(403).json({ success: false, message: 'Admin resets are handled by the school office' });
             }
-            userId = existing.rows[0].id;
         }
-        const live = await client.query(`
-            SELECT code, (created_at > NOW() - INTERVAL '30 seconds') AS just_sent
-            FROM email_verifications
-            WHERE lower(email) = $1 AND purpose = $2 AND used = false AND expires_at > NOW()
-            ORDER BY created_at DESC LIMIT 1
+        const recent = await client.query(`
+            SELECT id FROM email_verifications
+            WHERE lower(email) = $1 AND purpose = $2 AND created_at > NOW() - INTERVAL '30 seconds'
+            LIMIT 1
         `, [email, purpose]);
-        if (live.rows[0] && live.rows[0].just_sent) {
+        if (recent.rows[0]) {
             return res.status(429).json({ success: false, message: 'A code was just sent. Check your inbox and spam, then wait a moment before asking again.' });
         }
-        const code = live.rows[0] ? live.rows[0].code : sixDigitCode();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-        await deliverCode(email, code, purpose);
-        if (!live.rows[0]) {
-            await client.query(`
-                UPDATE email_verifications SET used = true
-                WHERE lower(email) = $1 AND purpose = $2 AND used = false
-            `, [email, purpose]);
-            await client.query(`
-                INSERT INTO email_verifications (email, code, purpose, expires_at)
-                VALUES ($1, $2, $3, $4)
-            `, [email, code, purpose, expiresAt]);
-            if (purpose === 'reset') {
-                await client.query(
-                    'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
-                    [userId, code, expiresAt]
-                );
-            }
-        }
+        await requestSupabaseCode(email);
+        await client.query(
+            'INSERT INTO email_verifications (email, code, purpose, expires_at, used) VALUES ($1, $2, $3, $4, true)',
+            [email, 'sent', purpose, new Date(Date.now() + 60 * 1000)]
+        );
         res.json({ success: true, message: 'Code sent. Check your inbox and your spam folder.' });
     } catch (error) {
         console.error('Send code error:', error.message);
+        if (error.code === 'WAIT') {
+            return res.status(429).json({ success: false, message: 'A code was just sent. Check your inbox and spam, then wait a moment before asking again.' });
+        }
         res.status(502).json({ success: false, message: 'The code could not be emailed. Try again.' });
     } finally {
         client.release();
@@ -514,19 +546,19 @@ app.post('/api/auth/reset-password', async (req, res) => {
         }
         
         const userId = userResult.rows[0].id;
-        
-        const resetResult = await client.query(
+        const mailed = await verifySupabaseCode(email, resetCode);
+        const resetResult = mailed ? { rows: [] } : await client.query(
             'SELECT * FROM password_resets WHERE user_id = $1 AND reset_code = $2 AND used = false AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
             [userId, resetCode]
         );
         
-        if (resetResult.rows.length === 0) {
+        if (!mailed && resetResult.rows.length === 0) {
             return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
         }
         
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
-        await client.query('UPDATE password_resets SET used = true WHERE id = $1', [resetResult.rows[0].id]);
+        if (!mailed) await client.query('UPDATE password_resets SET used = true WHERE id = $1', [resetResult.rows[0].id]);
         await client.query(`
             UPDATE email_verifications SET used = true
             WHERE lower(email) = $1 AND code = $2 AND purpose = 'reset'
