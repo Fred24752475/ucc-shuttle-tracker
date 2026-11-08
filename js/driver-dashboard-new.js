@@ -1194,7 +1194,9 @@ async function handleProfileUpdate(e) {
         });
         
         const result = await response.json();
-        alert(result.message || 'Profile updated');
+        if (!result.success) return alert(result.message || 'Could not save profile');
+        if (window.showProfilePane) showProfilePane('home');
+        if (window.paintAccountName) paintAccountName(data.name);
     } catch (error) {
         alert('Error updating profile');
     }
@@ -1228,8 +1230,9 @@ async function handlePasswordChange(e) {
         });
         
         const result = await response.json();
-        alert(result.message || 'Password changed');
+        if (!result.success) return alert(result.message || 'Could not change password');
         document.getElementById('passwordForm').reset();
+        if (window.showProfilePane) showProfilePane('home');
     } catch (error) {
         alert('Error changing password');
     }

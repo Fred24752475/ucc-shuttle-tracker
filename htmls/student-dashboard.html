@@ -629,32 +629,61 @@
 
 
         <main class="profile-section" id="profileSection" style="display: none;">
-            <div class="section-header">
-                <h2>Profile</h2>
-                <button class="back-btn" onclick="showDashboard(); return false;">Back</button>
-            </div>
-            <div class="profile-content">
-                <div class="profile-avatar">
-                    <img id="profileAvatar" src="https://www.gravatar.com/avatar/?d=mp" alt="Profile photo">
+            <section class="me-pane" data-pane="home">
+                <header class="me-bar">
+                    <button type="button" class="me-icon" onclick="showDashboard(); return false;" aria-label="Back">‹</button>
+                    <h2>My Profile</h2>
+                    <button type="button" class="me-icon" onclick="showProfilePane('edit')" aria-label="Edit">✎</button>
+                </header>
+                <div class="me-hero">
+                    <div class="me-photo">
+                        <img id="profileAvatar" src="https://www.gravatar.com/avatar/?d=mp" alt="">
+                        <label class="me-cam" aria-label="Change photo">
+                            <input id="profilePhoto" type="file" accept="image/*" hidden>
+                        </label>
+                    </div>
+                    <div class="me-id">
+                        <strong id="profileDisplayName">Your name</strong>
+                        <span id="profileDisplayEmail">email</span>
+                        <button type="button" class="me-edit" onclick="showProfilePane('edit')">Edit Profile</button>
+                    </div>
                 </div>
-                <label class="btn-secondary">Change photo
-                    <input id="profilePhoto" type="file" accept="image/*" hidden>
-                </label>
-                <form id="studentProfileForm" class="book-ride-form">
+                <div class="me-list">
+                    <button type="button" onclick="showProfilePane('edit')"><span>Personal details</span><i>›</i></button>
+                    <button type="button" onclick="showProfilePane('password')"><span>Password</span><i>›</i></button>
+                    <button type="button" class="me-out" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}"><span>Log out</span><i>›</i></button>
+                </div>
+            </section>
+            <section class="me-pane" data-pane="edit" hidden>
+                <header class="me-bar">
+                    <button type="button" class="me-icon" onclick="showProfilePane('home')" aria-label="Back">‹</button>
+                    <h2>Edit Profile</h2>
+                    <button type="button" class="me-save" onclick="document.getElementById('studentProfileForm').requestSubmit()" aria-label="Save">✓</button>
+                </header>
+                <div class="me-edit-photo">
+                    <img class="profile-avatar" src="https://www.gravatar.com/avatar/?d=mp" alt="">
+                </div>
+                <form id="studentProfileForm" class="me-form">
+                    <h3>Your information</h3>
                     <label>Name <input id="studentProfileName" type="text" required></label>
-                    <label>Email <input id="studentProfileEmail" type="email" disabled></label>
                     <label>Phone <input id="studentProfilePhone" type="tel"></label>
                     <label>Department <input id="studentProfileDepartment" type="text"></label>
-                    <button class="btn-primary" type="submit">Save details</button>
+                    <label>Email <input id="studentProfileEmail" type="email" disabled></label>
                 </form>
-                <form id="studentPasswordForm" class="book-ride-form">
+            </section>
+            <section class="me-pane" data-pane="password" hidden>
+                <header class="me-bar">
+                    <button type="button" class="me-icon" onclick="showProfilePane('home')" aria-label="Back">‹</button>
+                    <h2>Password</h2>
+                    <button type="button" class="me-save" onclick="document.getElementById('studentPasswordForm').requestSubmit()" aria-label="Save">✓</button>
+                </header>
+                <form id="studentPasswordForm" class="me-form">
+                    <h3>Change password</h3>
                     <label>Current password <input id="studentCurrentPassword" type="password" required></label>
                     <label>New password <input id="studentNewPassword" type="password" required minlength="6"></label>
                     <label>Confirm <input id="studentConfirmPassword" type="password" required minlength="6"></label>
-                    <button class="btn-primary" type="submit">Change password</button>
                 </form>
-                <button class="profile-logout" type="button" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}">Log out</button>
-            </div>
+            </section>
         </main>
 
     <!-- Mobile Menu Overlay -->

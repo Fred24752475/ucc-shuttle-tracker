@@ -723,6 +723,32 @@ input:focus, select:focus, textarea:focus {
     cursor: pointer;
 }
 
+.profile-section { background: #fff !important; padding: 0 !important; }
+.me-pane { background: #fff; min-height: 70vh; }
+.me-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 8px 8px 0; }
+.me-bar h2 { margin: 0; text-align: center; font-size: 18px; font-weight: 700; }
+.me-icon, .me-save { border: 0; background: transparent; font-size: 28px; line-height: 1; cursor: pointer; color: #111; }
+.me-save { color: #128a3a; font-weight: 700; }
+.me-hero { display: flex; gap: 16px; align-items: center; padding: 18px 20px 8px; }
+.me-photo { position: relative; width: 92px; height: 92px; flex: 0 0 92px; }
+.me-photo img, .me-edit-photo img { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; background: #eee; }
+.me-cam { position: absolute; right: 0; bottom: 0; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid #e6e8ec; }
+.me-cam::after { content: ""; position: absolute; inset: 7px; border-radius: 3px; border: 2px solid #111; }
+.me-id { min-width: 0; }
+.me-id strong { display: block; font-size: 20px; }
+.me-id span { display: block; color: #667085; font-size: 14px; margin: 2px 0 10px; overflow: hidden; text-overflow: ellipsis; }
+.me-edit { border: 0; background: #128a3a; color: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
+.me-list { margin-top: 12px; border-top: 1px solid #f2f4f7; }
+.me-list button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border: 0; border-bottom: 1px solid #f2f4f7; background: #fff; font-size: 16px; cursor: pointer; text-align: left; }
+.me-list i { color: #98a2b3; font-style: normal; font-size: 22px; }
+.me-list b { color: #667085; font-weight: 500; }
+.me-list .me-out { color: #d92d20; }
+.me-edit-photo { display: flex; justify-content: center; padding: 18px 0 8px; }
+.me-form { padding: 8px 20px 28px; display: grid; gap: 12px; }
+.me-form h3 { margin: 8px 0; font-size: 18px; }
+.me-form label { display: grid; gap: 6px; color: #667085; font-size: 13px; }
+.me-form input { width: 100%; border: 1px solid #e6e8ec; border-radius: 10px; padding: 12px 14px; font-size: 16px; color: #101828; background: #fff; }
+.me-status { color: #667085; padding: 8px 20px 20px; font-size: 13px; }
 .profile-logout {
     display: block;
     width: 100%;
@@ -855,6 +881,8 @@ input:focus, select:focus, textarea:focus {
         padding: 16px !important;
         overflow: visible !important;
     }
+
+    main.profile-section { padding: 0 !important; background: #fff !important; }
 
     main.messages-section,
     main#aiAssistantSection {

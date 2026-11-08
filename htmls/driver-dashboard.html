@@ -467,57 +467,61 @@
         </main>
 
         <main class="profile-section" id="profileSection" style="display: none;">
-            <div class="section-header">
-                <h2>👤 Profile</h2>
-                <button class="back-btn" onclick="navigateToSection('home')">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-            </div>
-            <div class="profile-content">
-                <!-- Driver Profile Summary -->
-                <section class="profile-summary-section">
-                    <h2 class="section-title">Driver Profile</h2>
-                    <div class="profile-summary-card">
-                        <div class="profile-avatar">
-                            <img id="profileAvatar" src="https://www.gravatar.com/avatar/?d=mp" alt="Driver">
-                            <label class="btn-secondary">Change photo
-                                <input id="profilePhoto" type="file" accept="image/*" hidden>
-                            </label>
-                        </div>
-                        <div class="profile-info">
-                            <h3 id="profileName">Loading...</h3>
-                            <p><strong>ID:</strong> <span id="profileId">--</span></p>
-                            <p><strong>License:</strong> <span id="profileLicense">--</span></p>
-                            <p><strong>Assigned Shuttle:</strong> <span id="profileShuttle">--</span></p>
-                            <p><strong>Current Route:</strong> <span id="profileRoute">--</span></p>
-                        </div>
-                        <div class="trip-status">
-                            <h4>Current Trip Status</h4>
-                            <div class="status-badge" id="tripStatusBadge">Idle</div>
-                        </div>
+            <section class="me-pane" data-pane="home">
+                <header class="me-bar">
+                    <button type="button" class="me-icon" onclick="navigateToSection('home')" aria-label="Back">‹</button>
+                    <h2>My Profile</h2>
+                    <button type="button" class="me-icon" onclick="showProfilePane('edit')" aria-label="Edit">✎</button>
+                </header>
+                <div class="me-hero">
+                    <div class="me-photo">
+                        <img id="profileAvatar" src="https://www.gravatar.com/avatar/?d=mp" alt="">
+                        <label class="me-cam" aria-label="Change photo">
+                            <input id="profilePhoto" type="file" accept="image/*" hidden>
+                        </label>
                     </div>
-                </section>
-                
-                <div class="profile-form">
-                    <h3>Driver Details</h3>
-                    <form id="profileForm">
-                        <label>Name: <input type="text" id="editName"></label>
-                        <label>Phone: <input type="tel" id="editPhone"></label>
-                        <label>License: <input type="text" id="editLicense"></label>
-                        <button type="submit" class="btn-primary">Update Profile</button>
-                    </form>
+                    <div class="me-id">
+                        <strong id="profileName">Driver</strong>
+                        <span id="profileDisplayEmail">email</span>
+                        <button type="button" class="me-edit" onclick="showProfilePane('edit')">Edit Profile</button>
+                    </div>
                 </div>
-                <div class="password-form">
-                    <h3>Change Password</h3>
-                    <form id="passwordForm">
-                        <label>Current Password: <input type="password" id="currentPassword"></label>
-                        <label>New Password: <input type="password" id="newPassword"></label>
-                        <label>Confirm Password: <input type="password" id="confirmPassword"></label>
-                        <button type="submit" class="btn-primary">Change Password</button>
-                    </form>
+                <div class="me-list">
+                    <button type="button"><span>Shuttle</span><b id="profileShuttle">--</b></button>
+                    <button type="button"><span>License</span><b id="profileLicense">--</b></button>
+                    <button type="button"><span>Route</span><b id="profileRoute">--</b></button>
+                    <button type="button" onclick="showProfilePane('edit')"><span>Personal details</span><i>›</i></button>
+                    <button type="button" onclick="showProfilePane('password')"><span>Password</span><i>›</i></button>
+                    <button type="button" class="me-out" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}"><span>Log out</span><i>›</i></button>
                 </div>
-                <button class="profile-logout" type="button" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}">Log out</button>
-            </div>
+                <p class="me-status">Trip status <span id="tripStatusBadge">Idle</span> <span id="profileId" hidden></span></p>
+            </section>
+            <section class="me-pane" data-pane="edit" hidden>
+                <header class="me-bar">
+                    <button type="button" class="me-icon" onclick="showProfilePane('home')" aria-label="Back">‹</button>
+                    <h2>Edit Profile</h2>
+                    <button type="button" class="me-save" onclick="document.getElementById('profileForm').requestSubmit()" aria-label="Save">✓</button>
+                </header>
+                <form id="profileForm" class="me-form">
+                    <h3>Your information</h3>
+                    <label>Name <input type="text" id="editName"></label>
+                    <label>Phone <input type="tel" id="editPhone"></label>
+                    <label>License <input type="text" id="editLicense"></label>
+                </form>
+            </section>
+            <section class="me-pane" data-pane="password" hidden>
+                <header class="me-bar">
+                    <button type="button" class="me-icon" onclick="showProfilePane('home')" aria-label="Back">‹</button>
+                    <h2>Password</h2>
+                    <button type="button" class="me-save" onclick="document.getElementById('passwordForm').requestSubmit()" aria-label="Save">✓</button>
+                </header>
+                <form id="passwordForm" class="me-form">
+                    <h3>Change password</h3>
+                    <label>Current password <input type="password" id="currentPassword"></label>
+                    <label>New password <input type="password" id="newPassword"></label>
+                    <label>Confirm <input type="password" id="confirmPassword"></label>
+                </form>
+            </section>
         </main>
     </div>
 

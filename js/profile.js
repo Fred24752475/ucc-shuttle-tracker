@@ -12,11 +12,23 @@ function paintAccountPhoto(url) {
 
 function paintAccountName(name) {
     if (!name) return;
-    ['userName', 'studentName', 'driverName', 'adminName', 'supportName'].forEach((id) => {
+    ['userName', 'studentName', 'driverName', 'adminName', 'supportName', 'profileDisplayName', 'profileName'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.textContent = name;
     });
 }
+
+function paintAccountEmail(email) {
+    if (!email) return;
+    const el = document.getElementById('profileDisplayEmail');
+    if (el) el.textContent = email;
+}
+
+window.showProfilePane = function (name) {
+    document.querySelectorAll('#profileSection .me-pane').forEach((pane) => {
+        pane.hidden = pane.getAttribute('data-pane') !== name;
+    });
+};
 
 function rememberAccount(user) {
     const current = savedAccount() || {};
@@ -26,6 +38,7 @@ function rememberAccount(user) {
     localStorage.setItem('ucc_user', JSON.stringify(next));
     paintAccountPhoto(next.profileImage);
     paintAccountName(next.name);
+    paintAccountEmail(next.email);
 }
 
 async function loadAccount() {
@@ -34,6 +47,7 @@ async function loadAccount() {
     if (cached) {
         paintAccountPhoto(cached.profileImage);
         paintAccountName(cached.name);
+        paintAccountEmail(cached.email);
     }
     if (!token) return cached;
     const response = await fetch('/api/users/profile', { headers: { Authorization: 'Bearer ' + token } });
@@ -93,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await changeAccountPassword(currentPassword, next);
                 passwordForm.reset();
-                alert('Password changed');
+                showProfilePane('home');
             } catch (error) {
                 alert(window.readableProblem ? window.readableProblem(error) : 'That could not be saved. Try again.');
             }
@@ -116,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (!data.success) return alert(data.message || 'Could not save profile');
             rememberAccount(data.profile);
-            alert('Profile saved');
+            showProfilePane('home');
         });
         loadAccount().then((profile) => {
             if (!profile) return;
