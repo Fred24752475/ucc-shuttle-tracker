@@ -1170,6 +1170,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 900px) {
+    #dashboardMain:not([style*="display: none"]) {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    #dashboardMain .widgets-grid { order: -1; }
+    #dashboardMain .quick-actions-section { order: 1; margin-bottom: 0 !important; }
     #dashboardMain .action-cards { grid-template-columns: 1fr 1fr !important; }
     #dashboardMain .action-card { padding: 12px !important; }
     #dashboardMain .action-card p { display: none !important; }
@@ -1178,8 +1185,8 @@ input:focus, select:focus, textarea:focus {
     #dashboardMain .widgets-grid {
         grid-template-columns: 1fr 1fr !important;
         grid-template-areas:
-            "shuttle shuttle"
             "map map"
+            "shuttle shuttle"
             "trip history" !important;
     }
     #dashboardMain .widget-header { padding: 12px !important; flex-wrap: nowrap; }
@@ -1196,11 +1203,23 @@ input:focus, select:focus, textarea:focus {
     #dashboardMain .current-trip-info { gap: 8px !important; }
     #dashboardMain .trip-summary { gap: 10px !important; margin-bottom: 10px !important; }
     #dashboardMain .summary-number { font-size: 22px !important; }
-    #dashboardMain .map-widget { max-height: none; overflow: visible; }
+    #dashboardMain .map-widget { max-height: none; overflow: visible; min-height: 0 !important; }
     #dashboardMain #liveMap,
     #dashboardMain .map-widget .leaflet-container {
-        min-height: 260px !important;
-        height: 260px !important;
+        min-height: 200px !important;
+        height: 200px !important;
+        max-height: none !important;
+    }
+    #mapSection {
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 12px !important;
+    }
+    #mapSection .map-content,
+    #mapSection #studentShuttleMap,
+    #mapSection .leaflet-container {
+        min-height: 360px !important;
+        height: calc(100vh - 150px) !important;
         max-height: none !important;
     }
     #dashboardMain .shuttle-list {
@@ -1212,11 +1231,15 @@ input:focus, select:focus, textarea:focus {
         display: flex !important;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 8px;
+        gap: 8px;
+        margin: 0 0 6px !important;
+        padding: 8px 10px !important;
     }
+    #dashboardMain .widgets-grid > .widget-card:nth-child(1) .widget-footer { padding: 8px 10px !important; }
+    #dashboardMain .widgets-grid > .widget-card:nth-child(1) .widget-btn { min-height: 36px !important; padding: 8px !important; }
     #dashboardMain .shuttle-info { display: flex; flex-direction: column; min-width: 0; }
-    #dashboardMain .shuttle-route { color: #667085; font-size: 12px; }
+    #dashboardMain .shuttle-route { display: none; }
+    #dashboardMain .shuttle-name { font-size: 14px !important; }
     #dashboardMain .shuttle-empty { margin: 0; color: #667085; font-size: 14px; }
 }
 

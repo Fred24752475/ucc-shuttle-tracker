@@ -23,17 +23,20 @@
     }
 
     function carIcon(bearing) {
+        const compact = window.matchMedia('(max-width: 900px)').matches;
+        const width = compact ? 22 : 34;
+        const height = compact ? 34 : 58;
         return L.divIcon({
             className: 'leaflet-div-icon campus-car-icon',
-            html: `<div style="width:34px;height:58px;transform:rotate(${bearing}deg);transform-origin:center center;">
-                <div style="width:34px;height:58px;background:#128a3a;border-radius:10px;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.45);overflow:hidden;">
-                    <div style="height:12px;margin:4px 4px 0;background:#102033;border-radius:3px;"></div>
-                    <div style="height:5px;margin-top:8px;background:#f5c518;"></div>
-                    <div style="height:4px;background:#d23b2e;"></div>
+            html: `<div style="width:${width}px;height:${height}px;transform:rotate(${bearing}deg);transform-origin:center center;">
+                <div style="width:${width}px;height:${height}px;background:#128a3a;border-radius:8px;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.45);overflow:hidden;">
+                    <div style="height:${compact ? 7 : 12}px;margin:3px 3px 0;background:#102033;border-radius:3px;"></div>
+                    <div style="height:4px;margin-top:${compact ? 4 : 8}px;background:#f5c518;"></div>
+                    <div style="height:3px;background:#d23b2e;"></div>
                 </div>
             </div>`,
-            iconSize: [34, 58],
-            iconAnchor: [17, 29]
+            iconSize: [width, height],
+            iconAnchor: [width / 2, height / 2]
         });
     }
 
@@ -152,11 +155,14 @@
         ensureStyle();
         if (el.querySelector('.simple-map-placeholder')) el.innerHTML = '';
         const compact = window.matchMedia('(max-width: 900px)').matches;
+        const fullPage = el.id === 'studentShuttleMap' || el.id === 'driverMap';
+        const mapHeight = !compact ? 'min(68vh, 520px)' : (fullPage ? 'calc(100vh - 150px)' : '200px');
         el.style.setProperty('width', '100%', 'important');
-        el.style.setProperty('height', compact ? '260px' : 'min(68vh, 520px)', 'important');
-        el.style.setProperty('min-height', compact ? '260px' : '320px', 'important');
+        el.style.setProperty('height', mapHeight, 'important');
+        el.style.setProperty('min-height', compact ? (fullPage ? '360px' : '200px') : '320px', 'important');
         el.style.setProperty('max-height', 'none', 'important');
-        el.style.setProperty('background', 'transparent', 'important');
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('background', '#dbe7df', 'important');
         if (!maps[containerId]) {
             const map = L.map(el, { zoomControl: true }).setView([5.116, -1.289], 15);
             const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
