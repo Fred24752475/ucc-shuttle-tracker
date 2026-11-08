@@ -915,6 +915,7 @@ async function loadSettings() {
                 <label>Trip timeout (minutes): <input id="setTimeout" type="number" value="30"></label>
             </div>
             <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+            <button class="profile-logout" type="button" onclick="handleLogout()">Log out</button>
         </div>
     `;
     mainContent.appendChild(section);

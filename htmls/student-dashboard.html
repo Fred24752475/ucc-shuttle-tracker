@@ -135,7 +135,6 @@
 
     <!-- Main Content Area -->
     <div class="main-content">
-        <button class="phone-logout" type="button" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}">Log out</button>
         <!-- Top Header -->
         <header class="top-header">
             <div class="header-content">
@@ -655,6 +654,7 @@
                     <label>Confirm <input id="studentConfirmPassword" type="password" required minlength="6"></label>
                     <button class="btn-primary" type="submit">Change password</button>
                 </form>
+                <button class="profile-logout" type="button" onclick="if(confirm('Log out?')){localStorage.clear();sessionStorage.clear();location.href='index.html'}">Log out</button>
             </div>
         </main>
 
