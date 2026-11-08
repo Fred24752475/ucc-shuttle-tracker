@@ -107,6 +107,7 @@
         <header class="top-header">
             <div class="header-content">
                 <div class="welcome-message">
+                    <button class="phone-menu" type="button" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobileOverlay').classList.toggle('open')"><span></span><span></span><span></span></button>
                     <h1 data-translate="welcome-back">Welcome back, <span id="driverName">Driver</span>! 👋</h1>
                     <p>Your personal driver dashboard</p>
                 </div>
@@ -439,7 +440,7 @@
             <div class="messages-content">
                 <div class="chat-layout">
                     <div class="chat-directory" id="chatDirectory">
-                        <div class="wa-appbar">Messages</div>
+                        <div class="wa-appbar"><button class="phone-menu" type="button" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobileOverlay').classList.toggle('open')"><span></span><span></span><span></span></button>Messages</div>
                         <div class="chat-tabs">
                             <button class="chat-tab-btn active" data-tab="chats" type="button">Chats</button>
                             <button class="chat-tab-btn" data-tab="drivers" type="button">Students</button>
@@ -583,6 +584,14 @@
     <script src="../js/driver-dashboard-new.js"></script>
     <script src="../js/driver-location-tracker.js"></script>
     <script src="../js/mobile-navigation.js"></script>
+    <script>
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('#sidebar .nav-item, #sidebar a, #sidebar .logout-btn')) return;
+            document.getElementById('sidebar').classList.remove('open');
+            var overlay = document.getElementById('mobileOverlay');
+            if (overlay) overlay.classList.remove('open');
+        }, true);
+    </script>
     
     <style>
         /* Main Section Display Styles */

@@ -101,7 +101,7 @@
         <header class="top-header">
             <div class="header-content">
                 <div class="welcome-message">
-                    <button class="phone-menu" type="button" onclick="document.getElementById('sidebar').classList.toggle('open')">Menu</button>
+                    <button class="phone-menu" type="button" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobileOverlay').classList.toggle('open')"><span></span><span></span><span></span></button>
                     <h1 data-translate="welcome-back">Welcome back, <span id="adminName">Admin</span></h1>
                     <p>System administration and management dashboard</p>
                 </div>
@@ -236,11 +236,20 @@
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+    <div class="mobile-overlay" id="mobileOverlay" onclick="document.getElementById('sidebar').classList.remove('open'); this.classList.remove('open')"></div>
 
     <link rel="stylesheet" href="../css/premium.css">
     <script>document.addEventListener('DOMContentLoaded', () => window.lucide && lucide.createIcons());</script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/admin-dashboard.js"></script>
+    <script src="../js/mobile-navigation.js"></script>
+    <script>
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('#sidebar .nav-item, #sidebar a, #sidebar .logout-btn')) return;
+            document.getElementById('sidebar').classList.remove('open');
+            var overlay = document.getElementById('mobileOverlay');
+            if (overlay) overlay.classList.remove('open');
+        }, true);
+    </script>
 </body>
 </html>

@@ -1,4 +1,12 @@
 // Modern Mobile Bottom Navigation Handler
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.sidebar .nav-item, .sidebar .logout-btn, .sidebar a')) return;
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    if (sidebar) sidebar.classList.remove('open', 'active');
+    if (overlay) overlay.classList.remove('open', 'active');
+}, true);
+
 document.addEventListener('DOMContentLoaded', () => {
     const bottomNavItems = document.querySelectorAll('.nav-item-mobile');
     const sections = {
@@ -76,8 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Close sidebar on mobile
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobileOverlay');
-            if (sidebar) sidebar.classList.remove('active');
-            if (overlay) overlay.classList.remove('active');
+            if (sidebar) sidebar.classList.remove('active', 'open');
+            if (overlay) overlay.classList.remove('active', 'open');
         });
     });
     

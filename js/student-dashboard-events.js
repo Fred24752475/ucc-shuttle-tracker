@@ -414,12 +414,8 @@ function closeSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('mobileOverlay');
 
-    if (sidebar) {
-        sidebar.classList.remove('active');
-    }
-    if (overlay) {
-        overlay.classList.remove('active');
-    }
+    if (sidebar) sidebar.classList.remove('active', 'open');
+    if (overlay) overlay.classList.remove('active', 'open');
 }
 
 function handleLogout() {

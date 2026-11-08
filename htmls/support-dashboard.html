@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Support Dashboard - UCC Shuttle Tracker</title>
     <link rel="stylesheet" href="../../css/support-dashboard.css">
+    <link rel="stylesheet" href="../css/premium.css">
     <link rel="stylesheet" href="../../css/mobile-modern.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff9800">
@@ -102,6 +103,7 @@
         <header class="top-header">
             <div class="header-content">
                 <div class="welcome-message">
+                    <button class="phone-menu" type="button" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobileOverlay').classList.toggle('open')"><span></span><span></span><span></span></button>
                     <h1>Welcome back, <span id="supportName">Support</span>! 👋</h1>
                     <p>Your customer support dashboard and messaging center</p>
                 </div>
@@ -259,7 +261,7 @@
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+    <div class="mobile-overlay" id="mobileOverlay" onclick="document.getElementById('sidebar').classList.remove('open'); this.classList.remove('open')"></div>
 
     <!-- Modern Bottom Navigation (Mobile Only) -->
     <nav class="bottom-nav">
@@ -286,5 +288,13 @@
 
     <script src="../../js/support-messaging.js"></script>
     <script src="../../js/mobile-navigation.js"></script>
+    <script>
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('#sidebar .nav-item, #sidebar a, #sidebar .logout-btn')) return;
+            document.getElementById('sidebar').classList.remove('open');
+            var overlay = document.getElementById('mobileOverlay');
+            if (overlay) overlay.classList.remove('open');
+        }, true);
+    </script>
 </body>
 </html>
