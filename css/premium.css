@@ -363,10 +363,47 @@ input:focus, select:focus, textarea:focus {
     justify-content: flex-end;
     position: relative;
     overflow: hidden;
-    background:
-        linear-gradient(180deg, rgba(8, 14, 22, 0.08) 0%, rgba(8, 14, 22, 0.28) 42%, rgba(8, 14, 22, 0.82) 100%),
-        url('../images/ucc-brt-buses.jpg') center 42% / cover no-repeat;
+    background: #0e1013;
     animation: rise 0.6s var(--ease) both;
+}
+
+.auth-slides {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.auth-slides img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transform: scale(1.08);
+    animation: authSlide 18s infinite;
+}
+
+.auth-slides img:first-child { opacity: 1; }
+.auth-slides img:nth-child(1) { animation-delay: 0s; }
+.auth-slides img:nth-child(2) { animation-delay: 6s; }
+.auth-slides img:nth-child(3) { animation-delay: 12s; }
+
+.auth-brand::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(8, 14, 22, 0.12) 0%, rgba(8, 14, 22, 0.2) 40%, rgba(8, 14, 22, 0.82) 100%);
+    pointer-events: none;
+}
+
+@keyframes authSlide {
+    0% { opacity: 0; transform: scale(1.1); }
+    8% { opacity: 1; transform: scale(1.06); }
+    30% { opacity: 1; transform: scale(1); }
+    38% { opacity: 0; transform: scale(1.02); }
+    100% { opacity: 0; transform: scale(1.1); }
 }
 
 .auth-brand h2 {
@@ -378,6 +415,11 @@ input:focus, select:focus, textarea:focus {
 }
 
 .auth-brand p { color: #b7bdc7; max-width: 36ch; margin-top: 16px; font-size: 16px; }
+
+.auth-mark, .auth-brand > div:not(.auth-slides) {
+    position: relative;
+    z-index: 2;
+}
 
 .auth-mark {
     display: flex;
@@ -525,4 +567,6 @@ html[data-theme="dark"] tbody tr:hover { background: #1c222b !important; }
         animation: none !important;
         transition: none !important;
     }
+    .auth-slides img { opacity: 0 !important; transform: none !important; }
+    .auth-slides img:first-child { opacity: 1 !important; }
 }
