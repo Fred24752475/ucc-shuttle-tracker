@@ -1114,6 +1114,93 @@ input:focus, select:focus, textarea:focus {
     .bottom-nav { display: none !important; }
 }
 
+#dashboardMain .quick-actions-section { margin-bottom: 16px !important; }
+#dashboardMain .action-cards {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+}
+#dashboardMain .action-card {
+    display: grid !important;
+    grid-template-columns: 40px 1fr;
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
+    text-align: left !important;
+    padding: 14px 16px !important;
+}
+#dashboardMain .action-card .action-icon {
+    grid-row: span 2;
+    width: 40px !important;
+    height: 40px !important;
+    margin: 0 !important;
+}
+#dashboardMain .action-card h3,
+#dashboardMain .action-card p { margin: 0 !important; text-align: left !important; }
+#dashboardMain .action-card h3 { font-size: 15px !important; }
+#dashboardMain .action-card p { font-size: 12px !important; line-height: 1.35; }
+#dashboardMain .widgets-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+        "map trip"
+        "map history"
+        "shuttle shuttle" !important;
+    gap: 14px !important;
+    align-items: stretch;
+}
+#dashboardMain .widgets-grid > .widget-card:nth-child(1) { grid-area: shuttle; }
+#dashboardMain .widgets-grid > .widget-card:nth-child(2) { grid-area: trip; }
+#dashboardMain .widgets-grid > .widget-card:nth-child(3) { grid-area: history; }
+#dashboardMain .widgets-grid > .map-widget { grid-area: map; min-height: 100%; }
+#dashboardMain .widget-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 10px;
+    padding: 14px 16px !important;
+}
+#dashboardMain .widget-header h3 { flex: 1; min-width: 0; margin: 0 !important; font-size: 15px !important; }
+#dashboardMain .widget-status { margin-left: auto; }
+#dashboardMain .map-widget .widget-content { flex: 1; display: flex; }
+#dashboardMain #liveMap { flex: 1; height: 100% !important; min-height: 320px !important; }
+
+@media (max-width: 1100px) {
+    #dashboardMain .action-cards { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 900px) {
+    #dashboardMain .action-cards { grid-template-columns: 1fr 1fr !important; }
+    #dashboardMain .action-card { padding: 12px !important; }
+    #dashboardMain .action-card p { display: none !important; }
+    #dashboardMain .action-card h3 { font-size: 13px !important; }
+    #dashboardMain .action-card .action-icon { grid-row: auto; }
+    #dashboardMain .widgets-grid {
+        grid-template-columns: 1fr 1fr !important;
+        grid-template-areas:
+            "trip history"
+            "map map"
+            "shuttle shuttle" !important;
+    }
+    #dashboardMain .widget-header { padding: 12px !important; flex-wrap: nowrap; }
+    #dashboardMain .widget-header h3 { font-size: 13px !important; line-height: 1.2; }
+    #dashboardMain .widget-icon { width: 32px !important; height: 32px !important; flex: 0 0 32px; }
+    #dashboardMain .widget-status .status-text { display: none; }
+    #dashboardMain .widget-content { padding: 10px !important; }
+    #dashboardMain .trip-status-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px !important;
+        padding: 8px 10px !important;
+    }
+    #dashboardMain .current-trip-info { gap: 8px !important; }
+    #dashboardMain .trip-summary { gap: 10px !important; margin-bottom: 10px !important; }
+    #dashboardMain .summary-number { font-size: 22px !important; }
+    #dashboardMain .map-widget { max-height: 360px; overflow: hidden; }
+    #dashboardMain #liveMap,
+    #dashboardMain .leaflet-container { min-height: 0 !important; height: 220px !important; max-height: 220px !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation: none !important;
