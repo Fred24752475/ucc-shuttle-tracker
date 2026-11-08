@@ -12,6 +12,7 @@ npm-debug.log*
 *.sqlite
 *.sqlite3
 
+uploads/
 # Logs
 logs/
 *.log

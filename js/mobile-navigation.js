@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'messages': document.getElementById('messagesSection'),
         'ai-assistant': document.getElementById('aiAssistantSection'),
         'history': document.getElementById('historySection'),
-        'help': document.getElementById('helpSection')
+        'help': document.getElementById('helpSection'),
+        'profile': document.getElementById('profileSection')
     };
 
     // Handle bottom nav clicks

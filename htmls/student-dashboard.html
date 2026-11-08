@@ -99,6 +99,12 @@
                         <span class="notification-badge" id="messageBadge" style="display: none;">0</span>
                     </a>
                 </li>
+                <li class="nav-item" data-section="profile">
+                    <a href="#profile">
+                        <i data-lucide="user"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
                 <li class="nav-item" data-section="help">
                     <a href="#help">
                         <i data-lucide="circle-help"></i>
@@ -655,6 +661,34 @@
 
 
 
+        <main class="profile-section" id="profileSection" style="display: none;">
+            <div class="section-header">
+                <h2>Profile</h2>
+                <button class="back-btn" onclick="showDashboard(); return false;">Back</button>
+            </div>
+            <div class="profile-content">
+                <div class="profile-avatar">
+                    <img id="profileAvatar" src="https://www.gravatar.com/avatar/?d=mp" alt="Profile photo">
+                </div>
+                <label class="btn-secondary">Change photo
+                    <input id="profilePhoto" type="file" accept="image/*" hidden>
+                </label>
+                <form id="studentProfileForm" class="book-ride-form">
+                    <label>Name <input id="studentProfileName" type="text" required></label>
+                    <label>Email <input id="studentProfileEmail" type="email" disabled></label>
+                    <label>Phone <input id="studentProfilePhone" type="tel"></label>
+                    <label>Department <input id="studentProfileDepartment" type="text"></label>
+                    <button class="btn-primary" type="submit">Save details</button>
+                </form>
+                <form id="studentPasswordForm" class="book-ride-form">
+                    <label>Current password <input id="studentCurrentPassword" type="password" required></label>
+                    <label>New password <input id="studentNewPassword" type="password" required minlength="6"></label>
+                    <label>Confirm <input id="studentConfirmPassword" type="password" required minlength="6"></label>
+                    <button class="btn-primary" type="submit">Change password</button>
+                </form>
+            </div>
+        </main>
+
     <!-- Mobile Menu Overlay -->
     <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
@@ -675,9 +709,9 @@
             <div class="nav-icon-mobile"><i data-lucide="message-circle"></i></div>
             <span class="nav-label-mobile">Messages</span>
         </div>
-        <div class="nav-item-mobile" data-section="ai-assistant">
-            <div class="nav-icon-mobile"><i data-lucide="sparkles"></i></div>
-            <span class="nav-label-mobile">AI</span>
+        <div class="nav-item-mobile" data-section="profile">
+            <div class="nav-icon-mobile"><i data-lucide="user"></i></div>
+            <span class="nav-label-mobile">Profile</span>
         </div>
     </nav>
 
@@ -1033,7 +1067,7 @@
     <script src="../js/student-map-simple.js"></script>
     <script src="../js/student-shuttle-tracker.js"></script>
     <script src="../js/messaging.js"></script>
-    <script src="../js/language-switcher.js"></script>
+    <script src="../js/profile.js"></script>
     <script src="../js/ai-assistant-multilingual.js"></script>
     <script src="../js/security.js"></script>
     <script src="../js/localization.js"></script>

@@ -7,6 +7,10 @@ const http = require('http');
 const socketIo = require('socket.io');
 const helmet = require('helmet');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 const pool = require('./database/postgres');
 
 const app = express();
@@ -33,6 +37,7 @@ const io = socketIo(server, {
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_location TEXT');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_latitude DECIMAL(10, 8)');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_longitude DECIMAL(11, 8)');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image TEXT');
         await pool.query(`CREATE TABLE IF NOT EXISTS friendships (
             id SERIAL PRIMARY KEY,
             requester_id INTEGER NOT NULL REFERENCES users(id),
@@ -80,6 +85,30 @@ app.use(helmet({
 app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
+
+const avatarDir = path.join(__dirname, 'uploads', 'avatars');
+fs.mkdirSync(avatarDir, { recursive: true });
+const avatarUpload = multer({
+    storage: multer.diskStorage({
+        destination: avatarDir,
+        filename: (req, file, cb) => cb(null, `${req.user.id}-${Date.now()}${path.extname(file.originalname || '.jpg')}`)
+    }),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype))
+});
+
+function publicAccount(user) {
+    const email = String(user.email || '').trim().toLowerCase();
+    const hash = crypto.createHash('md5').update(email).digest('hex');
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        profileImage: user.profile_image || `https://www.gravatar.com/avatar/${hash}?d=identicon&s=240`
+    };
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ucc_shuttle_tracker_enhanced_2024';
 
@@ -157,7 +186,7 @@ app.post('/api/auth/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            user: { id: user.id, email: user.email, role: user.role, name: user.name, phone: user.phone }
+            user: publicAccount(user)
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });
@@ -185,7 +214,7 @@ app.post('/api/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            user: { id: user.id, email: user.email, role: user.role, name: user.name, phone: user.phone }
+            user: publicAccount(user)
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });
@@ -335,12 +364,47 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'SELECT id, name, email, phone, role, student_id, license_number FROM users WHERE id = $1',
+            'SELECT id, name, email, phone, role, student_id, license_number, department, profile_image FROM users WHERE id = $1',
             [req.user.id]
         );
-        res.json({ success: true, user: result.rows[0] });
+        const account = publicAccount(result.rows[0]);
+        res.json({ success: true, user: { ...result.rows[0], ...account }, profile: account });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/users/avatar', authenticateToken, avatarUpload.single('image'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Choose an image' });
+    const client = await pool.connect();
+    try {
+        const imagePath = `/uploads/avatars/${req.file.filename}`;
+        await client.query('UPDATE users SET profile_image = $1 WHERE id = $2', [imagePath, req.user.id]);
+        const result = await client.query('SELECT id, name, email, phone, role, profile_image FROM users WHERE id = $1', [req.user.id]);
+        res.json({ success: true, user: publicAccount(result.rows[0]) });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not save photo' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/users/change-password', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+        const user = await client.query('SELECT password FROM users WHERE id = $1', [req.user.id]);
+        const matches = await bcrypt.compare(currentPassword || '', user.rows[0].password);
+        if (!matches) return res.status(400).json({ success: false, message: 'Current password is wrong' });
+        await client.query('UPDATE users SET password = $1 WHERE id = $2', [await bcrypt.hash(newPassword, 10), req.user.id]);
+        res.json({ success: true, message: 'Password changed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not change password' });
     } finally {
         client.release();
     }
@@ -350,7 +414,7 @@ app.get('/api/driver/profile', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
         const result = await client.query(`
-            SELECT u.id, u.name, u.email, u.phone, u.role, u.license_number,
+            SELECT u.id, u.name, u.email, u.phone, u.role, u.license_number, u.profile_image,
                    s.vehicle_number, s.status AS shuttle_status
             FROM users u
             LEFT JOIN shuttles s ON s.driver_id = u.id
@@ -371,7 +435,8 @@ app.get('/api/driver/profile', authenticateToken, async (req, res) => {
             license_number: row.license_number,
             assigned_shuttle: row.vehicle_number || 'Not Assigned',
             current_route: active?.routeName || 'No Active Route',
-            trip_status: active ? 'On route' : 'Idle'
+            trip_status: active ? 'On route' : 'Idle',
+            profileImage: publicAccount(row).profileImage
         };
         res.json({ success: true, profile, user: profile });
     } catch (error) {
@@ -425,11 +490,11 @@ app.get('/api/student/profile', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT id, name, email, phone, role, student_id, department, year_of_study, emergency_contact, emergency_phone
+            `SELECT id, name, email, phone, role, student_id, department, year_of_study, emergency_contact, emergency_phone, profile_image
              FROM users WHERE id = $1`,
             [req.user.id]
         );
-        const profile = result.rows[0];
+        const profile = { ...result.rows[0], ...publicAccount(result.rows[0]) };
         res.json({ success: true, profile, user: profile });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });

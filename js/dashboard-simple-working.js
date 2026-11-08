@@ -100,11 +100,12 @@ window.StudentDashboardSimple = {
             'history': 'historySection',
             'ai-assistant': 'aiAssistantSection',
             'messages': 'messagesSection',
-            'help': 'helpSection'
+            'help': 'helpSection',
+            'profile': 'profileSection'
         };
         
         // Hide all sections
-        ['dashboardMain', 'ridesSection', 'mapSection', 'historySection', 'aiAssistantSection', 'messagesSection', 'helpSection'].forEach(sectionId => {
+        ['dashboardMain', 'ridesSection', 'mapSection', 'historySection', 'aiAssistantSection', 'messagesSection', 'helpSection', 'profileSection'].forEach(sectionId => {
             const element = document.getElementById(sectionId);
             if (element) {
                 element.style.display = 'none';
