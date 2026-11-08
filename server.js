@@ -30,6 +30,25 @@ const io = socketIo(server, {
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS year_of_study TEXT');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact TEXT');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_phone TEXT');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_location TEXT');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_latitude DECIMAL(10, 8)');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_longitude DECIMAL(11, 8)');
+        await pool.query(`CREATE TABLE IF NOT EXISTS friendships (
+            id SERIAL PRIMARY KEY,
+            requester_id INTEGER NOT NULL REFERENCES users(id),
+            receiver_id INTEGER NOT NULL REFERENCES users(id),
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(requester_id, receiver_id)
+        )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS emergencies (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            latitude DECIMAL(10, 8),
+            longitude DECIMAL(11, 8),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
         await pool.query(`CREATE TABLE IF NOT EXISTS system_settings (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
@@ -344,6 +363,29 @@ app.get('/api/driver/profile', authenticateToken, async (req, res) => {
     }
 });
 
+app.put('/api/admin/users/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { name, phone, role, status } = req.body;
+        const result = await client.query(
+            `UPDATE users SET
+                name = COALESCE($1, name),
+                phone = COALESCE($2, phone),
+                role = COALESCE($3, role),
+                status = COALESCE($4, status)
+             WHERE id = $5
+             RETURNING id, name, email, phone, role, status`,
+            [name || null, phone || null, role || null, status || null, req.params.id]
+        );
+        if (!result.rows[0]) return res.status(404).json({ success: false, message: 'User not found' });
+        res.json({ success: true, user: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not update user' });
+    } finally {
+        client.release();
+    }
+});
+
 app.put('/api/driver/profile', authenticateToken, requireRole(['driver']), async (req, res) => {
     const client = await pool.connect();
     try {
@@ -407,7 +449,45 @@ app.get('/api/messaging/conversations', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/student/pickup-location', authenticateToken, async (req, res) => {
-    res.json({ success: true, location: null });
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT pickup_location, pickup_latitude, pickup_longitude FROM users WHERE id = $1',
+            [req.user.id]
+        );
+        const row = result.rows[0];
+        if (!row || !row.pickup_location) return res.json({ success: true, preference: null, location: null });
+        res.json({
+            success: true,
+            preference: {
+                location_name: row.pickup_location,
+                latitude: row.pickup_latitude,
+                longitude: row.pickup_longitude
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/student/pickup-location', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const name = req.body.location_name || req.body.pickup_location;
+        const latitude = req.body.latitude;
+        const longitude = req.body.longitude;
+        await client.query(
+            `UPDATE users SET pickup_location = $1, pickup_latitude = $2, pickup_longitude = $3 WHERE id = $4`,
+            [name, latitude || null, longitude || null, req.user.id]
+        );
+        res.json({ success: true, preference: { location_name: name, latitude, longitude } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not save pickup location' });
+    } finally {
+        client.release();
+    }
 });
 
 // Trip endpoints
@@ -940,9 +1020,17 @@ app.post('/api/driver/start-ride', authenticateToken, requireRole(['driver']), a
         const named = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
         const drive = beginCampusDrive(req.user.id, shuttle, named.rows[0]?.name);
         drive.routeName = route_name || drive.routeName;
+        const trip = await client.query(
+            `INSERT INTO trips (student_id, driver_id, shuttle_id, pickup_location, destination, fare, status)
+             VALUES ($1, $1, $2, $3, 'Campus loop', 0, 'active') RETURNING id`,
+            [req.user.id, shuttle.id, drive.routeName]
+        );
+        const current = activeDrivers.get(req.user.id);
+        if (current) activeDrivers.set(req.user.id, { ...current, tripId: trip.rows[0].id });
         
         res.json({
             success: true,
+            tripId: trip.rows[0].id,
             startedAt: drive.startedAt,
             loopMs: drive.loopMs,
             route: drive.route,
@@ -1025,6 +1113,9 @@ app.post('/api/driver/stop-ride', authenticateToken, requireRole(['driver']), as
             ['inactive', driverData.shuttleId]
         );
         
+        if (driverData.tripId) {
+            await client.query(`UPDATE trips SET status = 'completed' WHERE id = $1`, [driverData.tripId]);
+        }
         stopCampusDrive(req.user.id);
         activeDrivers.delete(req.user.id);
         
@@ -1317,14 +1408,27 @@ app.get('/api/help/faq', authenticateToken, (req, res) => {
 });
 
 app.post('/api/emergency', authenticateToken, async (req, res) => {
-    const { latitude, longitude } = req.body || {};
-    io.emit('emergency_alert', {
-        userId: req.user.id,
-        latitude: latitude || null,
-        longitude: longitude || null,
-        timestamp: Date.now()
-    });
-    res.json({ success: true, message: 'Emergency alert sent' });
+    const client = await pool.connect();
+    try {
+        const latitude = req.body?.latitude || null;
+        const longitude = req.body?.longitude || null;
+        const saved = await client.query(
+            'INSERT INTO emergencies (user_id, latitude, longitude) VALUES ($1, $2, $3) RETURNING id, created_at',
+            [req.user.id, latitude, longitude]
+        );
+        io.emit('emergency_alert', {
+            id: saved.rows[0].id,
+            userId: req.user.id,
+            latitude,
+            longitude,
+            timestamp: saved.rows[0].created_at
+        });
+        res.json({ success: true, message: 'Emergency alert sent', alert: saved.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not save emergency alert' });
+    } finally {
+        client.release();
+    }
 });
 
 app.get('/api/driver/routes', authenticateToken, (req, res) => {
@@ -1394,8 +1498,16 @@ app.post('/api/driver/start-route', authenticateToken, requireRole(['driver']), 
         await client.query('UPDATE shuttles SET status = $1 WHERE id = $2', ['active', shuttle.id]);
         const named = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
         const drive = beginCampusDrive(req.user.id, shuttle, named.rows[0]?.name);
+        const trip = await client.query(
+            `INSERT INTO trips (student_id, driver_id, shuttle_id, pickup_location, destination, fare, status)
+             VALUES ($1, $1, $2, $3, 'Campus loop', 0, 'active') RETURNING id`,
+            [req.user.id, shuttle.id, drive.routeName]
+        );
+        const current = activeDrivers.get(req.user.id);
+        if (current) activeDrivers.set(req.user.id, { ...current, tripId: trip.rows[0].id });
         res.json({
             success: true,
+            tripId: trip.rows[0].id,
             stops_count: drive.stops.length,
             shuttle,
             startedAt: drive.startedAt,
@@ -1417,6 +1529,9 @@ app.post('/api/driver/stop-route', authenticateToken, requireRole(['driver']), a
         stopCampusDrive(req.user.id);
         if (active?.shuttleId) {
             await client.query('UPDATE shuttles SET status = $1 WHERE id = $2', ['inactive', active.shuttleId]);
+        }
+        if (active?.tripId) {
+            await client.query(`UPDATE trips SET status = 'completed' WHERE id = $1`, [active.tripId]);
         }
         activeDrivers.delete(req.user.id);
         res.json({ success: true, message: 'Route stopped' });

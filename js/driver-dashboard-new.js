@@ -1140,14 +1140,28 @@ async function loadRoutes() {
     }
 }
 
-function handleBeginTrip() {
+async function handleBeginTrip() {
     const routeSelect = document.getElementById('routeSelect');
-    if (!routeSelect.value) {
+    if (!routeSelect || !routeSelect.value) {
         alert('Please select a route first');
         return;
     }
-    alert('Trip started! Track your progress in Active Route section.');
-    navigateToSection('active-route');
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/driver/start-route', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ route_name: routeSelect.options[routeSelect.selectedIndex].text })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Could not start the trip');
+            return;
+        }
+        navigateToSection('active-route');
+    } catch (error) {
+        alert('Could not start the trip');
+    }
 }
 
 function applyCompletedTripsFilter() {

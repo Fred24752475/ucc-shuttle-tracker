@@ -294,8 +294,27 @@ function filterUsers() {
     });
 }
 
-function editUser(id, email) {
-    showNotification(`Editing user: ${email}`, 'info');
+async function editUser(id, email) {
+    const name = window.prompt('Update name', email);
+    if (!name) return;
+    const phone = window.prompt('Update phone') || '';
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch(`/api/admin/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, phone })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Could not save user');
+            return;
+        }
+        showNotification('User saved', 'success');
+        fetchAllUsers();
+    } catch (error) {
+        alert('Could not save user');
+    }
 }
 
 async function deleteUser(id, email) {
@@ -872,7 +891,7 @@ function startAutoRefresh() {
 }
 
 // 7. SETTINGS
-function loadSettings() {
+async function loadSettings() {
     const mainContent = document.querySelector('.main-content');
     const existingSection = document.querySelector('.settings-section');
     if (existingSection) existingSection.remove();
@@ -899,6 +918,19 @@ function loadSettings() {
         </div>
     `;
     mainContent.appendChild(section);
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
+        const saved = data.settings || {};
+        if (saved.notifications != null) document.getElementById('setNotifications').checked = saved.notifications === 'true';
+        if (saved.auto_assign != null) document.getElementById('setAutoAssign').checked = saved.auto_assign === 'true';
+        if (saved.maintenance != null) document.getElementById('setMaintenance').checked = saved.maintenance === 'true';
+        if (saved.max_shuttles) document.getElementById('setMaxShuttles').value = saved.max_shuttles;
+        if (saved.trip_timeout) document.getElementById('setTimeout').value = saved.trip_timeout;
+    } catch (error) {
+        console.error('Could not load settings', error);
+    }
 }
 
 async function saveSettings() {
