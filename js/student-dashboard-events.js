@@ -355,9 +355,8 @@ function hideAllSections() {
 // ============= ACTION HANDLERS =============
 function handleRequestRideClick() {
     console.log('🎫 Request Ride clicked');
-    showRides();
-    // Show booking form or modal
-    alert('🚌 Opening ride booking form...\n\nThis will allow you to:\n• Select pickup location\n• Choose destination\n• View available shuttles\n• Book your ride');
+    if (typeof showRides === 'function') showRides();
+    if (typeof showBookingForm === 'function') showBookingForm();
 }
 
 function handleTrackShuttleClick() {
@@ -600,40 +599,46 @@ function loadRides() {
     loadRidesForTab('upcoming');
 }
 
-function loadRidesForTab(tabType) {
+async function loadRidesForTab(tabType) {
     const ridesList = document.getElementById('ridesList');
-    if (ridesList) {
-        ridesList.innerHTML = '<div class="loading-spinner"></div>';
-
-        // Simulate loading
-        setTimeout(() => {
+    if (!ridesList) return;
+    ridesList.innerHTML = '<div class="loading-spinner"></div>';
+    try {
+        const data = await apiRequest(`/rides?status=${tabType}`);
+        if (!data.success || !data.rides || data.rides.length === 0) {
             ridesList.innerHTML = `
                 <div style="padding: 20px; text-align: center; color: #666;">
                     <i class="fas fa-car" style="font-size: 48px; margin-bottom: 16px; color: #ddd;"></i>
                     <p>No ${tabType} rides found</p>
-                    <button onclick="handleRequestRideClick()" style="margin-top: 12px; background: #1565c0; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                    <button onclick="showBookingForm()" style="margin-top: 12px; background: #1565c0; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
                         Book a Ride
                     </button>
                 </div>
             `;
-        }, 500);
+            return;
+        }
+        ridesList.innerHTML = data.rides.map(ride => `
+            <div class="ride-card">
+                <div class="ride-header">
+                    <span class="ride-status ${ride.status}">${ride.status}</span>
+                    <span class="ride-id">#${ride.id}</span>
+                </div>
+                <div class="ride-details">
+                    <div class="ride-route">${ride.pickup_location} → ${ride.destination}</div>
+                    <div class="ride-time">${new Date(ride.created_at).toLocaleString()}</div>
+                </div>
+                ${ride.status !== 'completed' && ride.status !== 'cancelled'
+                    ? `<button class="btn-cancel" onclick="cancelRide(${ride.id})">Cancel</button>` : ''}
+            </div>
+        `).join('');
+    } catch (error) {
+        ridesList.innerHTML = '<p style="padding:20px;">Could not load rides. Please refresh.</p>';
     }
 }
 
 function loadTripHistory(filter = 'all') {
-    console.log(`📊 Loading trip history (${filter})...`);
-    const historyList = document.getElementById('historyList');
-    if (historyList) {
-        historyList.innerHTML = '<div class="loading-spinner"></div>';
-
-        setTimeout(() => {
-            historyList.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #666;">
-                    <i class="fas fa-history" style="font-size: 48px; margin-bottom: 16px; color: #ddd;"></i>
-                    <p>No trip history available</p>
-                </div>
-            `;
-        }, 500);
+    if (typeof loadTripHistoryData === 'function') {
+        loadTripHistoryData(filter && filter !== 'all' ? { status: filter } : {});
     }
 }
 
@@ -672,6 +677,14 @@ function sendEmergencyAlert() {
 
                 // TODO: Send to API
                 console.log('📍 Emergency location:', location);
+                const token = localStorage.getItem('ucc_token');
+                if (token) {
+                    fetch('/api/emergency', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latitude: location.lat, longitude: location.lng })
+                    }).catch(() => {});
+                }
                 alert('🚨 Emergency alert sent!\n\nCampus security and nearby drivers have been notified.\nStay safe!');
             },
             (error) => {

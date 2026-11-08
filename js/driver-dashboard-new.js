@@ -232,7 +232,7 @@ function initializeSocket() {
     return;
 
     /*
-    socket = io('http://localhost:3001', {
+    socket = io('', {
         auth: { token },
         transports: ['websocket', 'polling']
     });
@@ -329,6 +329,10 @@ function loadSectionContent(section) {
 
 
 function initializeDriverMap() {
+    if (window.CampusLiveMap) {
+        window.CampusLiveMap.attach('driverMap');
+        return;
+    }
     console.log('🗺️ Initializing real OpenStreetMap for driver...');
     
     const mapContainer = document.getElementById('driverMap');
@@ -344,7 +348,7 @@ function initializeDriverMap() {
     const map = L.map('driverMap').setView([5.1044, -1.1947], 15);
     
     // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
     
@@ -455,7 +459,7 @@ async function handleStartRoute() {
     }
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/start-route', {
+        const response = await fetch('/api/driver/start-route', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -467,7 +471,8 @@ async function handleStartRoute() {
         const data = await response.json();
         
         if (data.success) {
-            alert(`🎯 Route started! ETA tracking is now active for ${data.stops_count} stops.`);
+            updateNotification('Route started. The shuttle is driving the campus loop.', 'success');
+            navigateToSection('view-map');
             
             // Start location tracking with ETA
             startLocationTracking();
@@ -495,7 +500,7 @@ async function handleETAStatus() {
     if (!token) return;
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/eta-status', {
+        const response = await fetch('/api/driver/eta-status', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -522,7 +527,7 @@ async function handleStopRoute() {
     if (!token) return;
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/stop-route', {
+        const response = await fetch('/api/driver/stop-route', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -588,7 +593,7 @@ async function updateLocationWithETA(latitude, longitude) {
     if (!token) return;
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/location-eta', {
+        const response = await fetch('/api/driver/location-eta', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -732,7 +737,7 @@ async function loadHomeContent() {
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:3001/api/driver/profile', {
+        const response = await fetch('/api/driver/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -811,7 +816,7 @@ function showStartTripMap() {
         window.campusMap = L.map('campusMap').setView([5.1044, -1.1947], 15);
         
         // Add OpenStreetMap tiles
-        window.currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        window.currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(window.campusMap);
@@ -962,7 +967,7 @@ function showActiveRouteMap() {
             
             try {
                 window.activeRouteMap = L.map('activeRouteMap').setView([5.1044, -1.1947], 14);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '© OpenStreetMap'
                 }).addTo(window.activeRouteMap);
                 
@@ -1028,7 +1033,7 @@ async function loadCompletedTripsContent() {
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:3001/api/driver/trips/history', {
+        const response = await fetch('/api/driver/trips/history', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -1077,7 +1082,7 @@ async function loadProfileContent() {
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:3001/api/driver/profile', {
+        const response = await fetch('/api/driver/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -1120,7 +1125,7 @@ async function loadRoutes() {
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:3001/api/driver/routes', {
+        const response = await fetch('/api/driver/routes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -1161,7 +1166,7 @@ async function handleProfileUpdate(e) {
     };
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/profile', {
+        const response = await fetch('/api/driver/profile', {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1195,7 +1200,7 @@ async function handlePasswordChange(e) {
     };
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/change-password', {
+        const response = await fetch('/api/driver/change-password', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1241,7 +1246,7 @@ async function loadShuttleData() {
     
     try {
         // Get all shuttles
-        const response = await fetch('http://localhost:3001/api/shuttles', {
+        const response = await fetch('/api/shuttles', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1253,7 +1258,7 @@ async function loadShuttleData() {
         }
         
         // Get driver's assigned shuttle
-        const driverResponse = await fetch('http://localhost:3001/api/driver/shuttle', {
+        const driverResponse = await fetch('/api/driver/shuttle', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1457,7 +1462,7 @@ async function loadTripProgress() {
     if (!token) return;
     
     try {
-        const response = await fetch('http://localhost:3001/api/driver/active-trip', {
+        const response = await fetch('/api/driver/active-trip', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

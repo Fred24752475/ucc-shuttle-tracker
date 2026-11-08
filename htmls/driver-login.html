@@ -4,36 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Driver Login - UCC Shuttle Tracker</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 90%; max-width: 400px; }
-        .logo { text-align: center; margin-bottom: 30px; }
-        .logo h1 { color: #f5576c; font-size: 28px; margin-bottom: 5px; }
-        .logo p { color: #666; font-size: 14px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
-        .form-group input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border 0.3s; }
-        .form-group input:focus { outline: none; border-color: #f5576c; }
-        .btn-login { width: 100%; padding: 14px; background: #f5576c; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s; }
-        .btn-login:hover { background: #e04558; }
-        .links { text-align: center; margin-top: 20px; }
-        .links a { color: #f5576c; text-decoration: none; font-size: 14px; }
-        .links a:hover { text-decoration: underline; }
-        .error { background: #fee; color: #c33; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
-    </style>
+    <link rel="stylesheet" href="../css/premium.css">
+    <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
     <script>
-        // API Config - Use relative paths
-        const API_CONFIG = {
-            API_URL: ''
-        };
-        console.log('🌐 Using relative API paths');
+        const API_CONFIG = { API_URL: '' };
+        document.addEventListener('DOMContentLoaded', () => window.lucide && lucide.createIcons());
     </script>
 </head>
-<body>
+<body class="auth-shell">
+    <section class="auth-brand">
+        <div class="auth-mark"><i data-lucide="bus"></i> UCC Shuttle</div>
+        <div>
+            <h2>Drive the campus. Students follow live.</h2>
+            <p>Start a route and the shuttle moves on every map.</p>
+        </div>
+        <div></div>
+    </section>
+    <section class="auth-panel">
     <div class="login-container">
         <div class="logo">
-            <h1>🚗 Driver Login</h1>
+            <h1>Driver sign in</h1>
             <p>UCC Shuttle Tracker</p>
         </div>
         <div class="error" id="errorMsg"></div>
@@ -56,6 +46,7 @@
             <a href="forgot-password.html">Forgot Password?</a>
         </div>
     </div>
+    </section>
 
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {

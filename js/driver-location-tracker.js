@@ -32,8 +32,8 @@ async function startRideBroadcast() {
         if (data.success) {
             isRideActive = true;
             
-            // Show success notification
-            showNotification('🚀 Ride started! Broadcasting your location to students...', 'success');
+            showNotification('Ride started. Follow the shuttle on the campus map.', 'success');
+            if (typeof navigateToSection === 'function') navigateToSection('view-map');
             
             // Update UI
             updateRideUI(true);

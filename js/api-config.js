@@ -1,17 +1,8 @@
-// Auto-detect API URL based on current host
+// Same origin as the page. On Render the Node server serves both the
+// pages and /api, so requests stay relative.
 const API_CONFIG = {
     getBaseURL: function() {
-        const hostname = window.location.hostname;
-        
-        // If accessing via localhost, use localhost with port
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return `http://localhost:3001`;
-        }
-        
-        // For Render or other hosting, use the hostname without port
-        // Render handles the port automatically
-        const protocol = window.location.protocol; // http: or https:
-        return `${protocol}//${hostname}`;
+        return '';
     },
     
     API_URL: null

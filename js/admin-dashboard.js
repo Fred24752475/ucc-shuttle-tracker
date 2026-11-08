@@ -33,7 +33,7 @@ async function initializeSocket() {
     if (!token) return;
 
     try {
-        socket = io('http://localhost:3001', {
+        socket = io('', {
             auth: { token },
             transports: ['websocket', 'polling']
         });
@@ -132,24 +132,29 @@ function loadDashboard() {
 }
 
 async function loadDashboardData() {
-    // Mock data
-    const stats = {
-        totalUsers: 245,
-        activeShuttles: 8,
-        todayTrips: 42,
-        totalStudents: 220,
-        totalDrivers: 15,
-        totalShuttles: 10,
-        monthlyTrips: 1248
-    };
-    
-    document.getElementById('totalUsersCount').textContent = stats.totalUsers;
-    document.getElementById('activeShuttlesCount').textContent = stats.activeShuttles;
-    document.getElementById('todayTripsCount').textContent = stats.todayTrips;
-    document.getElementById('totalStudents').textContent = stats.totalStudents;
-    document.getElementById('totalDrivers').textContent = stats.totalDrivers;
-    document.getElementById('totalShuttles').textContent = stats.totalShuttles;
-    document.getElementById('monthlyTrips').textContent = stats.monthlyTrips;
+    const token = localStorage.getItem('ucc_token');
+    if (!token) return;
+    try {
+        const response = await fetch('/api/admin/stats', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) return;
+        const stats = data.stats;
+        const set = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+        set('totalUsersCount', stats.totalUsers);
+        set('activeShuttlesCount', stats.activeShuttles);
+        set('todayTripsCount', stats.todayTrips);
+        set('totalStudents', stats.totalStudents);
+        set('totalDrivers', stats.totalDrivers);
+        set('totalShuttles', stats.totalShuttles);
+        set('monthlyTrips', stats.monthlyTrips);
+    } catch (error) {
+        console.error('Error loading admin stats:', error);
+    }
 }
 
 // 2. USER MANAGEMENT
@@ -217,7 +222,7 @@ async function fetchAllUsers() {
     }
     
     try {
-        const response = await fetch('http://localhost:3001/api/admin/all-users', {
+        const response = await fetch('/api/admin/all-users', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -293,15 +298,28 @@ function editUser(id, email) {
     showNotification(`Editing user: ${email}`, 'info');
 }
 
-function deleteUser(id, email) {
-    if (confirm(`Delete user ${email}?`)) {
+async function deleteUser(id, email) {
+    if (!confirm(`Delete user ${email}?`)) return;
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch(`/api/admin/users/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Could not delete user');
+            return;
+        }
         showNotification('User deleted', 'success');
-        fetchAllUsers(); // Reload users
+        fetchAllUsers();
+    } catch (error) {
+        alert('Could not delete user');
     }
 }
 
 // 3. SHUTTLE FLEET
-function loadShuttleFleet() {
+async function loadShuttleFleet() {
     const mainContent = document.querySelector('.main-content');
     const existingSection = document.querySelector('.shuttles-section');
     if (existingSection) existingSection.remove();
@@ -315,14 +333,31 @@ function loadShuttleFleet() {
                 <i class="fas fa-plus"></i> Add Shuttle
             </button>
         </div>
-        <div id="fleetMap" style="height: 400px; margin-bottom: 20px;"></div>
-        <div class="shuttles-grid" id="shuttlesGrid">
-            ${generateShuttleCards()}
-        </div>
+        <div class="shuttles-grid" id="shuttlesGrid">Loading shuttles...</div>
     `;
     mainContent.appendChild(section);
-    
-    setTimeout(() => initializeFleetMap(), 100);
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/shuttles', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
+        const grid = document.getElementById('shuttlesGrid');
+        const shuttles = data.shuttles || [];
+        grid.innerHTML = shuttles.length ? shuttles.map(shuttle => `
+            <div class="shuttle-card ${shuttle.status}">
+                <div class="shuttle-header">
+                    <h3>${shuttle.vehicle_number}</h3>
+                    <span class="status-badge ${shuttle.status}">${shuttle.status}</span>
+                </div>
+                <div class="shuttle-info">
+                    <p><i class="fas fa-user"></i> Driver: ${shuttle.driver_name || 'Unassigned'}</p>
+                    <p><i class="fas fa-bus"></i> Model: ${shuttle.model || 'Campus bus'}</p>
+                    <p><i class="fas fa-users"></i> Capacity: ${shuttle.capacity || 14}</p>
+                </div>
+            </div>
+        `).join('') : '<p>No shuttles yet. Add one to get started.</p>';
+    } catch (error) {
+        document.getElementById('shuttlesGrid').textContent = 'Could not load shuttles.';
+    }
 }
 
 function generateShuttleCards() {
@@ -353,7 +388,7 @@ function initializeFleetMap() {
     if (!mapContainer) return;
     
     adminMap = L.map('fleetMap').setView([5.1044, -1.1947], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(adminMap);
     
@@ -381,7 +416,7 @@ function viewShuttleDetails(id) {
 }
 
 // 4. DRIVER MANAGEMENT
-function loadDriverManagement() {
+async function loadDriverManagement() {
     const mainContent = document.querySelector('.main-content');
     const existingSection = document.querySelector('.drivers-section');
     if (existingSection) existingSection.remove();
@@ -395,11 +430,34 @@ function loadDriverManagement() {
                 <i class="fas fa-user-check"></i> Assign Driver
             </button>
         </div>
-        <div class="drivers-grid">
-            ${generateDriverCards()}
-        </div>
+        <div class="drivers-grid" id="driversGrid">Loading drivers...</div>
     `;
     mainContent.appendChild(section);
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/admin/drivers', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
+        const grid = document.getElementById('driversGrid');
+        const drivers = data.drivers || [];
+        grid.innerHTML = drivers.length ? drivers.map(driver => `
+            <div class="driver-card">
+                <div class="driver-header">
+                    <div>
+                        <h3>${driver.name}</h3>
+                        <p>License: ${driver.license || 'Not set'}</p>
+                    </div>
+                    <span class="status-dot ${driver.shuttle_status === 'active' ? 'online' : 'offline'}"></span>
+                </div>
+                <div class="driver-info">
+                    <p><i class="fas fa-envelope"></i> ${driver.email}</p>
+                    <p><i class="fas fa-bus"></i> Shuttle: ${driver.shuttle || 'Unassigned'}</p>
+                    <p><i class="fas fa-route"></i> Trips: ${driver.trips}</p>
+                </div>
+            </div>
+        `).join('') : '<p>No drivers yet.</p>';
+    } catch (error) {
+        document.getElementById('driversGrid').textContent = 'Could not load drivers.';
+    }
 }
 
 function generateDriverCards() {
@@ -441,7 +499,7 @@ function viewDriverProfile(name) {
 }
 
 // 5. TRIP ANALYTICS
-function loadTripAnalytics() {
+async function loadTripAnalytics() {
     const mainContent = document.querySelector('.main-content');
     const existingSection = document.querySelector('.trips-section');
     if (existingSection) existingSection.remove();
@@ -460,24 +518,31 @@ function loadTripAnalytics() {
             <input type="date" id="endDate">
             <button class="btn-secondary" onclick="applyDateFilter()">Apply</button>
         </div>
-        <div class="charts-grid">
-            <div class="chart-card">
-                <h3>Monthly Trips</h3>
-                <canvas id="monthlyTripsChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h3>Peak Hours</h3>
-                <canvas id="peakHoursChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h3>Route Usage</h3>
-                <canvas id="routeUsageChart"></canvas>
-            </div>
-        </div>
+        <div class="users-table"><table>
+            <thead><tr><th>When</th><th>Student</th><th>From</th><th>To</th><th>Status</th><th>Fare</th></tr></thead>
+            <tbody id="adminTripsBody"><tr><td colspan="6">Loading trips...</td></tr></tbody>
+        </table></div>
     `;
     mainContent.appendChild(section);
-    
-    setTimeout(() => initializeCharts(), 100);
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/admin/trips', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
+        const body = document.getElementById('adminTripsBody');
+        const trips = data.trips || [];
+        body.innerHTML = trips.length ? trips.map(trip => `
+            <tr>
+                <td>${new Date(trip.created_at).toLocaleString()}</td>
+                <td>${trip.student_name || 'Unknown'}</td>
+                <td>${trip.pickup_location}</td>
+                <td>${trip.destination}</td>
+                <td>${trip.status}</td>
+                <td>GH₵${trip.fare}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="6">No trips yet.</td></tr>';
+    } catch (error) {
+        document.getElementById('adminTripsBody').innerHTML = '<tr><td colspan="6">Could not load trips.</td></tr>';
+    }
 }
 
 function initializeCharts() {
@@ -587,19 +652,26 @@ function loadReports() {
     mainContent.appendChild(section);
 }
 
-function generateReport(type) {
-    if (confirm(`Generate ${type} report?`)) {
-        showNotification(`Generating ${type} report...`, 'info');
-        setTimeout(() => {
-            const pdf = `Report: ${type}\nGenerated: ${new Date().toISOString()}`;
-            const blob = new Blob([pdf], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${type}-report.txt`;
-            a.click();
-            showNotification('Report downloaded', 'success');
-        }, 1000);
+async function generateReport(type) {
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch(`/api/admin/report/${type}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            alert('Could not generate that report');
+            return;
+        }
+        const text = await response.text();
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}-report.csv`;
+        a.click();
+        showNotification('Report downloaded', 'success');
+    } catch (error) {
+        alert('Could not generate that report');
     }
 }
 
@@ -673,7 +745,7 @@ async function loadDriverLocations() {
     if (!token) return;
     
     try {
-        const response = await fetch('http://localhost:3001/api/admin/driver-locations', {
+        const response = await fetch('/api/admin/driver-locations', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -814,14 +886,14 @@ function loadSettings() {
         <div class="settings-content">
             <div class="setting-group">
                 <h3>General Settings</h3>
-                <label><input type="checkbox" checked> Enable notifications</label>
-                <label><input type="checkbox" checked> Auto-assign drivers</label>
-                <label><input type="checkbox"> Maintenance mode</label>
+                <label><input id="setNotifications" type="checkbox" checked> Enable notifications</label>
+                <label><input id="setAutoAssign" type="checkbox" checked> Auto-assign drivers</label>
+                <label><input id="setMaintenance" type="checkbox"> Maintenance mode</label>
             </div>
             <div class="setting-group">
                 <h3>System Configuration</h3>
-                <label>Max shuttles per route: <input type="number" value="5"></label>
-                <label>Trip timeout (minutes): <input type="number" value="30"></label>
+                <label>Max shuttles per route: <input id="setMaxShuttles" type="number" value="5"></label>
+                <label>Trip timeout (minutes): <input id="setTimeout" type="number" value="30"></label>
             </div>
             <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
         </div>
@@ -829,8 +901,26 @@ function loadSettings() {
     mainContent.appendChild(section);
 }
 
-function saveSettings() {
-    showNotification('Settings saved', 'success');
+async function saveSettings() {
+    const token = localStorage.getItem('ucc_token');
+    const body = {
+        notifications: document.getElementById('setNotifications').checked,
+        auto_assign: document.getElementById('setAutoAssign').checked,
+        maintenance: document.getElementById('setMaintenance').checked,
+        max_shuttles: document.getElementById('setMaxShuttles').value,
+        trip_timeout: document.getElementById('setTimeout').value
+    };
+    try {
+        const response = await fetch('/api/admin/settings', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await response.json();
+        showNotification(data.success ? 'Settings saved' : (data.message || 'Could not save'), data.success ? 'success' : 'error');
+    } catch (error) {
+        showNotification('Could not save settings', 'error');
+    }
 }
 
 // MODAL FUNCTIONS
@@ -931,7 +1021,7 @@ async function handleAddUser(event) {
     }
     
     try {
-        const response = await fetch('http://localhost:3001/api/admin/add-user', {
+        const response = await fetch('/api/admin/add-user', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -955,12 +1045,50 @@ async function handleAddUser(event) {
     }
 }
 
-function showAddShuttleModal() {
-    showNotification('Add Shuttle modal - Feature ready', 'info');
+async function showAddShuttleModal() {
+    const vehicle = window.prompt('Vehicle number, for example UCC-010');
+    if (!vehicle) return;
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/admin/shuttles', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vehicle_number: vehicle.trim() })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Could not add shuttle');
+            return;
+        }
+        showNotification(`${vehicle.trim()} added`, 'success');
+        loadShuttleFleet();
+    } catch (error) {
+        alert('Could not add shuttle');
+    }
 }
 
-function showAssignDriverModal() {
-    showNotification('Assign Driver modal - Feature ready', 'info');
+async function showAssignDriverModal() {
+    const email = window.prompt('Driver email');
+    if (!email) return;
+    const vehicle = window.prompt('Vehicle number to assign');
+    if (!vehicle) return;
+    const token = localStorage.getItem('ucc_token');
+    try {
+        const response = await fetch('/api/admin/assign-driver', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), vehicle_number: vehicle.trim() })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Could not assign driver');
+            return;
+        }
+        showNotification(`${data.driver.name} assigned to ${vehicle.trim()}`, 'success');
+        loadDriverManagement();
+    } catch (error) {
+        alert('Could not assign driver');
+    }
 }
 
 function showSystemReport() {

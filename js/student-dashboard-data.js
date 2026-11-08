@@ -8,7 +8,7 @@ const API_BASE = '/api';
 
 // Get auth token
 function getAuthToken() {
-    return localStorage.getItem('token');
+    return localStorage.getItem('ucc_token') || localStorage.getItem('token');
 }
 
 // API request helper
@@ -42,21 +42,26 @@ async function loadDashboardData() {
         // Load profile for name
         const profileData = await apiRequest('/student/profile');
         if (profileData.success && profileData.profile) {
-            document.getElementById('studentName').textContent = profileData.profile.name.split(' ')[0];
-            document.getElementById('userName').textContent = profileData.profile.name;
+            const first = (profileData.profile.name || 'Student').split(' ')[0];
+            const studentName = document.getElementById('studentName');
+            const userName = document.getElementById('userName');
+            if (studentName) studentName.textContent = first;
+            if (userName) userName.textContent = profileData.profile.name;
         }
 
         // Load active shuttles count
         const shuttlesData = await apiRequest('/shuttles');
         if (shuttlesData.success) {
             const activeCount = shuttlesData.shuttles.filter(s => s.status === 'active').length;
-            document.getElementById('activeShuttlesCount').textContent = activeCount;
+            const countEl = document.getElementById('activeShuttlesCount');
+            if (countEl) countEl.textContent = activeCount;
         }
 
         // Load today's trips
         const ridesData = await apiRequest('/rides?status=active');
         if (ridesData.success) {
-            document.getElementById('todayTripsCount').textContent = ridesData.rides.length;
+            const tripsEl = document.getElementById('todayTripsCount');
+            if (tripsEl) tripsEl.textContent = ridesData.rides.length;
         }
 
         // Load shuttle list
@@ -72,7 +77,7 @@ async function loadShuttleList() {
         const data = await apiRequest('/shuttles');
         const shuttleList = document.getElementById('shuttleList');
 
-        if (data.success && data.shuttles) {
+        if (data.success && data.shuttles && shuttleList) {
             shuttleList.innerHTML = data.shuttles.map(shuttle => `
                 <div class="shuttle-item">
                     <div class="shuttle-icon">🚌</div>
@@ -134,6 +139,15 @@ async function loadRidesData() {
         console.error('Error loading rides:', error);
     }
 }
+
+window.showBookingForm = async function () {
+    const pickup = window.prompt('Pickup location', 'Main Gate');
+    if (!pickup) return;
+    const destination = window.prompt('Destination', 'Library');
+    if (!destination) return;
+    await bookRide({ pickup_location: pickup, destination });
+    if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
+};
 
 // Book a ride
 async function bookRide(formData) {

@@ -347,9 +347,9 @@ class LanguageSwitcher {
         style.textContent = `
             .language-switcher {
                 position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 10000;
+                top: 16px;
+                right: 132px;
+                z-index: 40;
             }
             
             .lang-btn {

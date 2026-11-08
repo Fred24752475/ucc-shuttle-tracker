@@ -118,6 +118,12 @@ window.StudentDashboardSimple = {
             targetSection.style.display = 'block';
             console.log(`✅ SIMPLE showing: ${targetSectionId}`);
         }
+        if (section === 'map' && window.CampusLiveMap) {
+            setTimeout(() => window.CampusLiveMap.attach('studentShuttleMap'), 120);
+        }
+        if (section === 'dashboard' && window.CampusLiveMap) {
+            setTimeout(() => window.CampusLiveMap.attach('liveMap'), 120);
+        }
         
         // Update navigation
         document.querySelectorAll('.nav-item').forEach(item => {

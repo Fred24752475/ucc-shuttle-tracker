@@ -17,7 +17,7 @@ class DarkModeManager {
         darkModeToggle.className = 'dark-mode-toggle';
         darkModeToggle.innerHTML = `
             <button class="theme-btn" id="themeBtn" title="Toggle Dark Mode">
-                <i class="fas fa-${this.isDarkMode ? 'sun' : 'moon'}"></i>
+                <i data-lucide="${this.isDarkMode ? 'sun' : 'moon'}"></i>
                 <span class="theme-text">${this.isDarkMode ? 'Light' : 'Dark'}</span>
             </button>
         `;
@@ -34,9 +34,10 @@ class DarkModeManager {
         style.textContent = `
             .dark-mode-toggle {
                 position: fixed;
-                top: 20px;
-                left: 20px;
-                z-index: 9999;
+                top: 16px;
+                right: 20px;
+                left: auto;
+                z-index: 40;
             }
             
             .theme-btn {
@@ -70,6 +71,7 @@ class DarkModeManager {
 
         // Insert at top of page
         document.body.insertBefore(darkModeToggle, document.body.firstChild);
+        if (window.lucide) lucide.createIcons();
 
         // Add event listener
         document.getElementById('themeBtn').addEventListener('click', () => {

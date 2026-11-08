@@ -6,7 +6,9 @@
     <title>Driver Dashboard - UCC Shuttle Tracker</title>
     <link rel="stylesheet" href="../css/driver-dashboard.css">
     <link rel="stylesheet" href="../css/mobile-modern.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         /* Inline styles to avoid CSP font issues */
@@ -32,44 +34,44 @@
             <ul class="nav-list">
                 <li class="nav-item active" data-section="home">
                     <a href="#home">
-                        <span style="width:20px;text-align:center;">🏠</span>
+                        <i data-lucide="house"></i>
                         <span data-translate="dashboard">Home</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="active-route">
                     <a href="#active-route">
-                        <span style="width:20px;text-align:center;">🛣️</span>
+                        <i data-lucide="route"></i>
                         <span data-translate="active-route">Active Route</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="view-map">
                     <a href="#view-map">
-                        <span style="width:20px;text-align:center;">🗺️</span>
+                        <i data-lucide="map"></i>
                         <span data-translate="shuttle-map">View Map</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="completed-trips">
                     <a href="#completed-trips">
-                        <span style="width:20px;text-align:center;">📈</span>
+                        <i data-lucide="list-checks"></i>
                         <span data-translate="completed-trips">Completed Trips</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="notifications">
                     <a href="#notifications">
-                        <span style="width:20px;text-align:center;">🔔</span>
+                        <i data-lucide="bell"></i>
                         <span data-translate="notifications">Notifications</span>
                         <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="support">
                     <a href="#support">
-                        <span style="width:20px;text-align:center;">🎆</span>
+                        <i data-lucide="life-buoy"></i>
                         <span data-translate="support">Support</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="profile">
                     <a href="#profile">
-                        <span style="width:20px;text-align:center;">👤</span>
+                        <i data-lucide="user"></i>
                         <span data-translate="profile">Profile</span>
                     </a>
                 </li>
@@ -481,22 +483,22 @@
     <!-- Modern Bottom Navigation (Mobile Only) -->
     <nav class="bottom-nav">
         <div class="nav-item-mobile active" data-section="home">
-            <div class="nav-icon-mobile">🏠</div>
+            <div class="nav-icon-mobile"><i data-lucide="house"></i></div>
             <span class="nav-label-mobile">Home</span>
         </div>
         <div class="nav-item-mobile" data-section="active-route">
-            <div class="nav-icon-mobile">🛣️</div>
+            <div class="nav-icon-mobile"><i data-lucide="route"></i></div>
             <span class="nav-label-mobile">Route</span>
         </div>
         <div class="nav-item-mobile center" data-section="view-map">
-            <div class="nav-icon-mobile">🗺️</div>
+            <div class="nav-icon-mobile"><i data-lucide="map"></i></div>
         </div>
         <div class="nav-item-mobile" data-section="completed-trips">
-            <div class="nav-icon-mobile">📈</div>
+            <div class="nav-icon-mobile"><i data-lucide="list-checks"></i></div>
             <span class="nav-label-mobile">Trips</span>
         </div>
         <div class="nav-item-mobile" data-section="profile">
-            <div class="nav-icon-mobile">👤</div>
+            <div class="nav-icon-mobile"><i data-lucide="user"></i></div>
             <span class="nav-label-mobile">Profile</span>
         </div>
     </nav>
@@ -526,7 +528,10 @@
             });
         });
     </script>
+    <link rel="stylesheet" href="../css/premium.css">
+    <script>document.addEventListener('DOMContentLoaded', () => window.lucide && lucide.createIcons());</script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="../js/campus-live-map.js"></script>
     <script src="../js/api-config.js"></script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/driver-dashboard-new.js"></script>

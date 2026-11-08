@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - UCC Shuttle Tracker</title>
-    <link rel="stylesheet" href="../../css/admin-dashboard.css">
+    <link rel="stylesheet" href="../css/admin-dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#9c27b0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#101114">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
@@ -27,49 +29,49 @@
             <ul class="nav-list">
                 <li class="nav-item active">
                     <a href="#dashboard" data-section="dashboard">
-                        <span style="width:20px;text-align:center;">🏠</span>
+                        <i data-lucide="layout-dashboard"></i>
                         <span data-translate="dashboard">Admin Dashboard</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#users" data-section="users">
-                        <span style="width:20px;text-align:center;">👥</span>
+                        <i data-lucide="users"></i>
                         <span data-translate="profile">User Management</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#shuttles" data-section="shuttles">
-                        <span style="width:20px;text-align:center;">🚌</span>
+                        <i data-lucide="bus"></i>
                         <span data-translate="shuttle-map">Shuttle Fleet</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#tracking" data-section="tracking">
-                        <span style="width:20px;text-align:center;">🗺️</span>
+                        <i data-lucide="map-pinned"></i>
                         <span>Live Tracking</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#drivers" data-section="drivers">
-                        <span style="width:20px;text-align:center;">👨‍✈️</span>
+                        <i data-lucide="id-card"></i>
                         <span data-translate="support">Driver Management</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#trips" data-section="trips">
-                        <span style="width:20px;text-align:center;">🛣️</span>
+                        <i data-lucide="route"></i>
                         <span>Trip Analytics</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#reports" data-section="reports">
-                        <span style="width:20px;text-align:center;">📊</span>
+                        <i data-lucide="file-bar-chart"></i>
                         <span>Reports</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#settings" data-section="settings">
-                        <span style="width:20px;text-align:center;">⚙️</span>
+                        <i data-lucide="settings"></i>
                         <span>System Settings</span>
                     </a>
                 </li>
@@ -235,6 +237,8 @@
     <!-- Mobile Menu Overlay -->
     <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
+    <link rel="stylesheet" href="../css/premium.css">
+    <script>document.addEventListener('DOMContentLoaded', () => window.lucide && lucide.createIcons());</script>
     <script src="../js/dark-mode.js"></script>
     <script src="../js/language-switcher.js"></script>
     <script src="../js/role-protection.js"></script>

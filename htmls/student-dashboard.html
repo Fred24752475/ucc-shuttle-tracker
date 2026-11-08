@@ -14,8 +14,9 @@
     <link rel="stylesheet" href="../css/ai-chat-mobile.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1565c0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/../css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <!-- Leaflet CSS and JS - Optimized loading -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -63,44 +64,44 @@
             <ul class="nav-list">
                 <li class="nav-item active" data-section="dashboard">
                     <a href="#dashboard">
-                        <span style="width:20px;text-align:center;">🏠</span>
+                        <i data-lucide="layout-dashboard"></i>
                         <span data-translate="dashboard">My Dashboard</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="rides">
                     <a href="#rides">
-                        <span style="width:20px;text-align:center;">🚗</span>
+                        <i data-lucide="car"></i>
                         <span data-translate="my-rides">My Rides</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="map">
                     <a href="#map">
-                        <span style="width:20px;text-align:center;">🗺️</span>
+                        <i data-lucide="map"></i>
                         <span data-translate="shuttle-map">Shuttle Map</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="history">
                     <a href="#history">
-                        <span style="width:20px;text-align:center;">📊</span>
+                        <i data-lucide="history"></i>
                         <span data-translate="trip-history">Trip History</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="ai-assistant">
                     <a href="#ai-assistant">
-                        <span style="width:20px;text-align:center;">🤖</span>
+                        <i data-lucide="sparkles"></i>
                         <span data-translate="ai-assistant">AI Assistant</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="messages">
                     <a href="#messages">
-                        <span style="width:20px;text-align:center;">💬</span>
+                        <i data-lucide="message-circle"></i>
                         <span data-translate="messages">Messages</span>
                         <span class="notification-badge" id="messageBadge" style="display: none;">0</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="help">
                     <a href="#help">
-                        <span style="width:20px;text-align:center;">❓</span>
+                        <i data-lucide="circle-help"></i>
                         <span data-translate="help">Help</span>
                     </a>
                 </li>
@@ -132,7 +133,7 @@
         <header class="top-header">
             <div class="header-content">
                 <div class="welcome-message">
-                    <h1 data-translate="welcome-back">Welcome back, <span id="studentName">Student</span>! 👋</h1>
+                    <h1 data-translate="welcome-back">Welcome back, <span id="studentName">Student</span></h1>
                     <p>Your personal shuttle tracking dashboard</p>
                 </div>
                 <div class="header-stats">
@@ -157,7 +158,7 @@
                 <div class="action-cards">
                     <div class="action-card primary" onclick="handleRequestRideClick()">
                         <div class="action-icon">
-                            <i class="fas fa-plus-circle"></i>
+                            <i data-lucide="plus"></i>
                         </div>
                         <h3 data-translate="request-ride">Request Ride</h3>
                         <p data-translate="book-shuttle">Book a shuttle to your destination</p>
@@ -165,7 +166,7 @@
 
                     <div class="action-card info" onclick="handleTrackShuttleClick()">
                         <div class="action-icon">
-                            <i class="fas fa-map-pin"></i>
+                            <i data-lucide="map-pin"></i>
                         </div>
                         <h3 data-translate="track-shuttle">Track Shuttle</h3>
                         <p data-translate="see-real-time">See real-time shuttle locations</p>
@@ -173,7 +174,7 @@
                     
                     <div class="action-card success" onclick="handleSetPickupLocation()">
                         <div class="action-icon">
-                            <i class="fas fa-map-marker-alt"></i>
+                            <i data-lucide="locate-fixed"></i>
                         </div>
                         <h3 data-translate="set-pickup">Set Pickup Location</h3>
                         <p data-translate="get-eta-alerts">Get ETA alerts when shuttles are near</p>
@@ -181,7 +182,7 @@
 
                     <div class="action-card warning" onclick="handleEmergencyClick()">
                         <div class="action-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i data-lucide="siren"></i>
                         </div>
                         <h3 data-translate="emergency-alert">Emergency Alert</h3>
                         <p data-translate="send-emergency">Send emergency notification</p>
@@ -635,22 +636,22 @@
     <!-- Modern Bottom Navigation (Mobile Only) -->
     <nav class="bottom-nav">
         <div class="nav-item-mobile active" data-section="dashboard">
-            <div class="nav-icon-mobile">🏠</div>
+            <div class="nav-icon-mobile"><i data-lucide="layout-dashboard"></i></div>
             <span class="nav-label-mobile">Home</span>
         </div>
         <div class="nav-item-mobile" data-section="rides">
-            <div class="nav-icon-mobile">🚗</div>
+            <div class="nav-icon-mobile"><i data-lucide="car"></i></div>
             <span class="nav-label-mobile">Rides</span>
         </div>
         <div class="nav-item-mobile center" data-section="map">
-            <div class="nav-icon-mobile">🗺️</div>
+            <div class="nav-icon-mobile"><i data-lucide="map"></i></div>
         </div>
         <div class="nav-item-mobile" data-section="messages">
-            <div class="nav-icon-mobile">💬</div>
+            <div class="nav-icon-mobile"><i data-lucide="message-circle"></i></div>
             <span class="nav-label-mobile">Messages</span>
         </div>
         <div class="nav-item-mobile" data-section="ai-assistant">
-            <div class="nav-icon-mobile">🤖</div>
+            <div class="nav-icon-mobile"><i data-lucide="sparkles"></i></div>
             <span class="nav-label-mobile">AI</span>
         </div>
     </nav>
@@ -996,8 +997,11 @@
     </style>
 
 
+    <link rel="stylesheet" href="../css/premium.css">
+    <script>document.addEventListener('DOMContentLoaded', () => window.lucide && lucide.createIcons());</script>
     <!-- JavaScript -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="../js/campus-live-map.js"></script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/student-dashboard-events.js"></script>
     <script src="../js/student-dashboard-data.js"></script>
@@ -1016,14 +1020,12 @@
         // Initialize student shuttle tracker when map section is shown
         function showMap() {
             document.getElementById('mapSection').style.display = 'block';
-            document.getElementById('dashboardSection').style.display = 'none';
+            const home = document.getElementById('dashboardMain') || document.querySelector('.dashboard-main');
+            if (home) home.style.display = 'none';
             
-            // Initialize tracking map
             setTimeout(() => {
-                if (typeof initializeStudentTrackingMap === 'function') {
-                    initializeStudentTrackingMap();
-                }
-            }, 100);
+                if (window.CampusLiveMap) CampusLiveMap.attach('studentShuttleMap');
+            }, 150);
         }
     </script>
 
@@ -1297,7 +1299,7 @@ function showMapError() {
                         console.log('✅ Real map created successfully');
 
                         // Add OpenStreetMap tiles with improved loading for Ghana
-                        const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        const osmTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                             attribution: '© OpenStreetMap contributors',
                             maxZoom: 18,
                             minZoom: 3,
@@ -1315,7 +1317,7 @@ function showMapError() {
                         osmTiles.on('tileerror', function(e) {
                             console.warn('⚠️ Primary tile failed, using backup...');
                             // Try alternative tile server
-                            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                                 attribution: '© OpenStreetMap contributors',
                                 maxZoom: 18,
                                 minZoom: 3
@@ -1482,7 +1484,7 @@ function showMapError() {
                 try {
                     if (!window.simpleMap) {
                         window.simpleMap = L.map('shuttleMap').setView([5.6037, -0.1870], 15);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                             attribution: '© OpenStreetMap contributors',
                             maxZoom: 19
                         }).addTo(window.simpleMap);

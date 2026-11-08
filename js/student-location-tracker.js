@@ -17,6 +17,7 @@ class StudentLocationTracker {
 
     // Initialize the dashboard location map
     async init() {
+        if (window.CampusLiveMap) return;
         console.log('📍 Initializing student location tracker...');
 
         const mapContainer = document.getElementById('liveMap');
@@ -120,7 +121,7 @@ class StudentLocationTracker {
         });
 
         // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap',
             maxZoom: 19
         }).addTo(this.map);
@@ -250,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize when dashboard is shown
     setTimeout(() => {
+        if (window.CampusLiveMap) return;
         if (document.getElementById('liveMap')) {
             window.studentLocationTracker.init();
         }

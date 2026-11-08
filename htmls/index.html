@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>UCC Shuttle Tracker - Main Portal</title>
-    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../css/styles.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="../../js/database.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -266,6 +266,7 @@
             animation: loading 1s linear infinite;
         }
     </style>
+    <link rel="stylesheet" href="../css/premium.css">
 </head>
 <body class="main-portal">
     <!-- Mobile Navigation -->
@@ -275,21 +276,21 @@
             <button class="hamburger-menu" onclick="toggleMobileMenu()">☰</button>
         </div>
         <ul class="mobile-nav-items">
-            <li><a href="../htmls/index.html" onclick="closeMobileMenu()">🏠 Main Portal</a></li>
-            <li><a href="../htmls/student-login.html" onclick="closeMobileMenu()">🎓 Student Portal</a></li>
-            <li><a href="../htmls/driver-login.html" onclick="closeMobileMenu()">🚗 Driver Portal</a></li>
-            <li><a href="../htmls/admin-login.html" onclick="closeMobileMenu()">⚙️ Admin Portal</a></li>
-            <li><a href="../htmls/password-reset.html" onclick="closeMobileMenu()">🔐 Reset Password</a></li>
+            <li><a href="index.html" onclick="closeMobileMenu()">🏠 Main Portal</a></li>
+            <li><a href="student-login.html" onclick="closeMobileMenu()">🎓 Student Portal</a></li>
+            <li><a href="driver-login.html" onclick="closeMobileMenu()">🚗 Driver Portal</a></li>
+            <li><a href="admin-login.html" onclick="closeMobileMenu()">⚙️ Admin Portal</a></li>
+            <li><a href="password-reset.html" onclick="closeMobileMenu()">🔐 Reset Password</a></li>
         </ul>
     </nav>
 
     <!-- Desktop Navigation -->
     <nav class="desktop-nav" id="desktopNav">
-        <a href="../htmls/index.html">🏠 Main Portal</a>
-        <a href="../htmls/student-login.html">🎓 Student Portal</a>
-        <a href="../htmls/driver-login.html">🚗 Driver Portal</a>
-        <a href="../htmls/admin-login.html">⚙️ Admin Portal</a>
-        <a href="../htmls/password-reset.html">🔐 Reset Password</a>
+        <a href="index.html">🏠 Main Portal</a>
+        <a href="student-login.html">🎓 Student Portal</a>
+        <a href="driver-login.html">🚗 Driver Portal</a>
+        <a href="admin-login.html">⚙️ Admin Portal</a>
+        <a href="password-reset.html">🔐 Reset Password</a>
     </nav>
 
     <div class="portal-header">
@@ -299,7 +300,7 @@
 
     <div class="role-cards">
         <!-- Student Role Card -->
-        <a href="../htmls/student-login.html" class="student-role role-card">
+        <a href="student-login.html" class="student-role role-card">
             <div class="role-icon">🎓</div>
             <h2 class="role-title">Student</h2>
             <div class="role-description">
@@ -322,7 +323,7 @@
         </a>
 
         <!-- Driver Role Card -->
-        <a href="../htmls/driver-login.html" class="driver-role role-card">
+        <a href="driver-login.html" class="driver-role role-card">
             <div class="role-icon">🚗</div>
             <h2 class="role-title">Driver</h2>
             <div class="role-description">
@@ -348,7 +349,7 @@
         </a>
 
         <!-- Admin Role Card -->
-        <a href="../htmls/admin-login.html" class="admin-role role-card">
+        <a href="admin-login.html" class="admin-role role-card">
             <div class="role-icon">⚙️</div>
             <h2 class="role-title">Administrator</h2>
             <div class="role-description">

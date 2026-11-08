@@ -8,7 +8,7 @@ function initializeStudentMap() {
     
     try {
         studentMap = L.map('shuttleMap').setView([5.1044, -1.1947], 14);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(studentMap);
         

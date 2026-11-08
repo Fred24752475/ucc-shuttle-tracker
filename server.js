@@ -8,8 +8,6 @@ const socketIo = require('socket.io');
 const helmet = require('helmet');
 const nodemailer = require('nodemailer');
 const pool = require('./database/postgres');
-const { createTables } = require('./database/schema');
-const { seedData } = require('./database/seed');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,14 +15,26 @@ const io = socketIo(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Initialize database
+// Connect to the existing Supabase database. Tables are created once
+// from supabase-setup.sql — never drop them on boot.
 (async () => {
     try {
         console.log('Attempting database connection...');
-        await createTables();
-        console.log('Tables created successfully');
-        await seedData();
-        console.log('Database seeded successfully');
+        await pool.query('SELECT 1');
+        const tables = await pool.query(`SELECT to_regclass('public.users') AS users`);
+        if (!tables.rows[0].users) {
+            console.error('users table is missing. Run supabase-setup.sql in the Supabase SQL editor.');
+            process.exit(1);
+        }
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS year_of_study TEXT');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact TEXT');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_phone TEXT');
+        await pool.query(`CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )`);
+        console.log('Database connected');
     } catch (error) {
         console.error('Database initialization failed:', error.message);
         process.exit(1);
@@ -42,7 +52,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: ["'self'", "ws:", "wss:", "https:", "http:"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"]
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"]
         }
     }
 }));
@@ -297,14 +307,92 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
     }
 });
 
+app.get('/api/driver/profile', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT u.id, u.name, u.email, u.phone, u.role, u.license_number,
+                   s.vehicle_number, s.status AS shuttle_status
+            FROM users u
+            LEFT JOIN shuttles s ON s.driver_id = u.id
+            WHERE u.id = $1
+            ORDER BY s.id DESC
+            LIMIT 1
+        `, [req.user.id]);
+        const row = result.rows[0];
+        if (!row) return res.status(404).json({ success: false, message: 'Driver not found' });
+        const active = activeDrivers.get(req.user.id);
+        const profile = {
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+            role: row.role,
+            driver_license: row.license_number,
+            license_number: row.license_number,
+            assigned_shuttle: row.vehicle_number || 'Not Assigned',
+            current_route: active?.routeName || 'No Active Route',
+            trip_status: active ? 'On route' : 'Idle'
+        };
+        res.json({ success: true, profile, user: profile });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.put('/api/driver/profile', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { name, phone, driver_license } = req.body;
+        const result = await client.query(
+            `UPDATE users SET name = COALESCE($1, name), phone = COALESCE($2, phone), license_number = COALESCE($3, license_number)
+             WHERE id = $4 RETURNING id, name, email, phone, license_number`,
+            [name || null, phone || null, driver_license || null, req.user.id]
+        );
+        res.json({ success: true, message: 'Profile updated', profile: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
 app.get('/api/student/profile', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'SELECT id, name, email, phone, role, student_id FROM users WHERE id = $1',
+            `SELECT id, name, email, phone, role, student_id, department, year_of_study, emergency_contact, emergency_phone
+             FROM users WHERE id = $1`,
             [req.user.id]
         );
-        res.json({ success: true, user: result.rows[0] });
+        const profile = result.rows[0];
+        res.json({ success: true, profile, user: profile });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.put('/api/student/profile', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { name, phone, department, year_of_study, emergency_contact, emergency_phone } = req.body;
+        const result = await client.query(
+            `UPDATE users SET
+                name = COALESCE($1, name),
+                phone = COALESCE($2, phone),
+                department = COALESCE($3, department),
+                year_of_study = COALESCE($4, year_of_study),
+                emergency_contact = COALESCE($5, emergency_contact),
+                emergency_phone = COALESCE($6, emergency_phone)
+             WHERE id = $7
+             RETURNING id, name, email, phone, role, student_id, department, year_of_study, emergency_contact, emergency_phone`,
+            [name || null, phone || null, department || null, year_of_study || null, emergency_contact || null, emergency_phone || null, req.user.id]
+        );
+        res.json({ success: true, message: 'Profile updated', profile: result.rows[0] });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });
     } finally {
@@ -614,6 +702,109 @@ app.get('/api/messages/:friendId', authenticateToken, async (req, res) => {
 
 // Store active drivers and their locations in memory
 const activeDrivers = new Map(); // driverId -> { latitude, longitude, timestamp, shuttleId }
+const rideTimers = new Map();
+
+// A closed loop around UCC so the shuttle drives a full scenic trip.
+const CAMPUS_LOOP = [
+    [5.1038, -1.1962],
+    [5.1044, -1.1947],
+    [5.1051, -1.1930],
+    [5.1060, -1.1914],
+    [5.1069, -1.1896],
+    [5.1074, -1.1878],
+    [5.1065, -1.1868],
+    [5.1053, -1.1882],
+    [5.1044, -1.1904],
+    [5.1036, -1.1926],
+    [5.1034, -1.1946],
+    [5.1038, -1.1962]
+];
+const CAMPUS_LOOP_MS = 150000;
+
+function campusPoint(startedAt, now) {
+    const t = ((now - startedAt) % CAMPUS_LOOP_MS) / CAMPUS_LOOP_MS;
+    const span = CAMPUS_LOOP.length - 1;
+    const pos = t * span;
+    const i = Math.floor(pos);
+    const f = pos - i;
+    const a = CAMPUS_LOOP[i];
+    const b = CAMPUS_LOOP[Math.min(i + 1, span)];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+}
+
+function stopCampusDrive(driverId) {
+    const timer = rideTimers.get(driverId);
+    if (timer) clearInterval(timer);
+    rideTimers.delete(driverId);
+    const active = activeDrivers.get(driverId);
+    if (active?.shuttleId) {
+        io.emit('shuttle_offline', { shuttleId: active.shuttleId, driverId });
+    }
+}
+
+function beginCampusDrive(driverId, shuttle, driverName) {
+    if (rideTimers.has(driverId)) stopCampusDrive(driverId);
+    const startedAt = Date.now();
+    const [lat, lng] = campusPoint(startedAt, startedAt);
+    const state = {
+        shuttleId: shuttle.id,
+        vehicleNumber: shuttle.vehicle_number,
+        driverName: driverName || 'Driver',
+        routeName: 'Campus Express',
+        startedAt,
+        loopMs: CAMPUS_LOOP_MS,
+        route: CAMPUS_LOOP,
+        latitude: lat,
+        longitude: lng,
+        timestamp: startedAt,
+        stops: CAMPUS_LOOP.map((point, index) => ({
+            name: ['Main Gate', 'Library Road', 'Science Block', 'North Hall', 'Hostel Area', 'East Gate', 'Auditorium', 'Admin Block', 'Market', 'South Gate', 'West Road', 'Main Gate'][index],
+            latitude: point[0],
+            longitude: point[1]
+        }))
+    };
+    activeDrivers.set(driverId, state);
+    pool.query(
+        'UPDATE shuttles SET status = $1, current_latitude = $2, current_longitude = $3 WHERE id = $4',
+        ['active', lat, lng, shuttle.id]
+    ).catch(() => {});
+
+    const publish = (latitude, longitude, timestamp) => {
+        io.emit('shuttle_location_update', {
+            driverId,
+            shuttleId: shuttle.id,
+            vehicleNumber: shuttle.vehicle_number,
+            driverName: state.driverName,
+            latitude,
+            longitude,
+            routeName: state.routeName,
+            startedAt,
+            loopMs: CAMPUS_LOOP_MS,
+            route: CAMPUS_LOOP,
+            timestamp
+        });
+    };
+    publish(lat, lng, startedAt);
+
+    let ticks = 0;
+    const timer = setInterval(() => {
+        const current = activeDrivers.get(driverId);
+        if (!current) return stopCampusDrive(driverId);
+        const now = Date.now();
+        const [latitude, longitude] = campusPoint(current.startedAt, now);
+        activeDrivers.set(driverId, { ...current, latitude, longitude, timestamp: now });
+        publish(latitude, longitude, now);
+        ticks += 1;
+        if (ticks % 5 === 0) {
+            pool.query(
+                'UPDATE shuttles SET current_latitude = $1, current_longitude = $2, status = $3 WHERE id = $4',
+                [latitude, longitude, 'active', shuttle.id]
+            ).catch(() => {});
+        }
+    }, 1000);
+    rideTimers.set(driverId, timer);
+    return state;
+}
 
 // Driver starts a ride (begins broadcasting location)
 app.post('/api/driver/start-ride', authenticateToken, requireRole(['driver']), async (req, res) => {
@@ -653,17 +844,15 @@ app.post('/api/driver/start-ride', authenticateToken, requireRole(['driver']), a
             ['active', shuttle.id]
         );
         
-        // Mark driver as active
-        activeDrivers.set(req.user.id, {
-            shuttleId: shuttle.id,
-            latitude: null,
-            longitude: null,
-            timestamp: Date.now(),
-            routeName: route_name || 'Campus Route'
-        });
+        const named = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+        const drive = beginCampusDrive(req.user.id, shuttle, named.rows[0]?.name);
+        drive.routeName = route_name || drive.routeName;
         
         res.json({
             success: true,
+            startedAt: drive.startedAt,
+            loopMs: drive.loopMs,
+            route: drive.route,
             message: 'Ride started! Your location will be broadcast to students.',
             shuttle: shuttle
         });
@@ -743,7 +932,7 @@ app.post('/api/driver/stop-ride', authenticateToken, requireRole(['driver']), as
             ['inactive', driverData.shuttleId]
         );
         
-        // Remove from active drivers
+        stopCampusDrive(req.user.id);
         activeDrivers.delete(req.user.id);
         
         // Notify students that shuttle is offline
@@ -784,6 +973,10 @@ app.get('/api/shuttles/active', authenticateToken, async (req, res) => {
                 latitude: driverData?.latitude || shuttle.current_latitude,
                 longitude: driverData?.longitude || shuttle.current_longitude,
                 routeName: driverData?.routeName || 'Campus Route',
+                route: driverData?.route || CAMPUS_LOOP,
+                startedAt: driverData?.startedAt || null,
+                loopMs: driverData?.loopMs || CAMPUS_LOOP_MS,
+                vehicle_number: driverData?.vehicleNumber || shuttle.vehicle_number,
                 lastUpdate: driverData?.timestamp || null
             };
         });
@@ -851,6 +1044,585 @@ app.get('/api/admin/overview', authenticateToken, requireRole(['admin']), async 
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+function kmBetween(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+const CAMPUS_ROUTES = [
+    { id: 'campus', name: 'Campus Express' },
+    { id: 'library', name: 'Library Loop' },
+    { id: 'hostel', name: 'Hostel Area' }
+];
+
+async function ensureDriverShuttle(client, driverId) {
+    const existing = await client.query('SELECT * FROM shuttles WHERE driver_id = $1 ORDER BY id DESC LIMIT 1', [driverId]);
+    if (existing.rows[0]) return existing.rows[0];
+    const created = await client.query(
+        'INSERT INTO shuttles (driver_id, vehicle_number, status) VALUES ($1, $2, $3) RETURNING *',
+        [driverId, `SHUTTLE-${driverId}`, 'inactive']
+    );
+    return created.rows[0];
+}
+
+app.get('/api/shuttles', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT s.id, s.vehicle_number, s.model, s.capacity, s.status,
+                   s.current_latitude, s.current_longitude, s.driver_id,
+                   s.current_latitude AS latitude, s.current_longitude AS longitude,
+                   u.name AS driver_name
+            FROM shuttles s
+            LEFT JOIN users u ON u.id = s.driver_id
+            ORDER BY s.vehicle_number
+        `);
+        res.json({ success: true, shuttles: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/rides', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const status = req.query.status;
+        let sql = `
+            SELECT t.*, u.name AS driver_name, s.vehicle_number AS shuttle_number
+            FROM trips t
+            LEFT JOIN users u ON u.id = t.driver_id
+            LEFT JOIN shuttles s ON s.id = t.shuttle_id
+            WHERE t.student_id = $1
+        `;
+        if (status === 'cancelled') sql += ` AND t.status = 'cancelled'`;
+        else if (status === 'history' || status === 'completed') sql += ` AND t.status = 'completed'`;
+        else if (status === 'active' || status === 'upcoming') sql += ` AND t.status NOT IN ('completed', 'cancelled')`;
+        sql += ' ORDER BY t.created_at DESC';
+        const result = await client.query(sql, [req.user.id]);
+        res.json({ success: true, rides: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/rides/book', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const pickup = req.body.pickup_location || req.body.pickup || 'Main Gate';
+        const destination = req.body.destination || 'Library';
+        const result = await client.query(
+            `INSERT INTO trips (student_id, pickup_location, destination, fare, status)
+             VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
+            [req.user.id, pickup, destination, req.body.fare || 2]
+        );
+        res.json({ success: true, ride: result.rows[0], message: 'Ride booked' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not book ride' });
+    } finally {
+        client.release();
+    }
+});
+
+app.delete('/api/rides/:id', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `UPDATE trips SET status = 'cancelled' WHERE id = $1 AND student_id = $2 AND status NOT IN ('completed', 'cancelled') RETURNING *`,
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows[0]) return res.status(404).json({ success: false, message: 'Ride not found' });
+        res.json({ success: true, ride: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/trips/history', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT t.*, u.name AS driver_name, s.vehicle_number AS shuttle_number
+            FROM trips t
+            LEFT JOIN users u ON u.id = t.driver_id
+            LEFT JOIN shuttles s ON s.id = t.shuttle_id
+            WHERE t.student_id = $1
+            ORDER BY t.created_at DESC
+        `, [req.user.id]);
+        res.json({ success: true, trips: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/help/faq', authenticateToken, (req, res) => {
+    res.json({
+        success: true,
+        faqs: [
+            { category: 'Booking', question: 'How do I book a ride?', answer: 'Open My Rides and choose Book a Ride. Enter your pickup and destination.' },
+            { category: 'Booking', question: 'Can I cancel a ride?', answer: 'Yes. Open My Rides and press Cancel on a ride that has not finished.' },
+            { category: 'Tracking', question: 'How do I see the shuttle?', answer: 'Open the map. Active shuttles appear when a driver has started a route.' },
+            { category: 'Account', question: 'I forgot my password', answer: 'Use Forgot Password on the login page. A reset code is stored for your account.' }
+        ]
+    });
+});
+
+app.post('/api/emergency', authenticateToken, async (req, res) => {
+    const { latitude, longitude } = req.body || {};
+    io.emit('emergency_alert', {
+        userId: req.user.id,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        timestamp: Date.now()
+    });
+    res.json({ success: true, message: 'Emergency alert sent' });
+});
+
+app.get('/api/driver/routes', authenticateToken, (req, res) => {
+    res.json({ success: true, routes: CAMPUS_ROUTES });
+});
+
+app.get('/api/driver/shuttle', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const shuttle = await ensureDriverShuttle(client, req.user.id);
+        const active = activeDrivers.get(req.user.id);
+        res.json({
+            success: true,
+            shuttle: {
+                ...shuttle,
+                latitude: shuttle.current_latitude,
+                longitude: shuttle.current_longitude,
+                route: active?.routeName || 'Campus Express'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/driver/trips/history', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT t.*, COALESCE(t.destination, 'Campus Express') AS route,
+                   1 AS passengers
+            FROM trips t
+            WHERE t.driver_id = $1
+            ORDER BY t.created_at DESC
+        `, [req.user.id]);
+        res.json({ success: true, trips: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/driver/active-trip', authenticateToken, requireRole(['driver']), (req, res) => {
+    const active = activeDrivers.get(req.user.id);
+    if (!active) return res.json({ success: true, trip: null });
+    res.json({
+        success: true,
+        trip: {
+            route: active.routeName,
+            pickup_points: (active.stops || []).map((stop, index) => ({
+                name: stop.name,
+                latitude: stop.latitude,
+                longitude: stop.longitude,
+                status: index === 0 ? 'current' : 'pending'
+            }))
+        }
+    });
+});
+
+app.post('/api/driver/start-route', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const shuttle = await ensureDriverShuttle(client, req.user.id);
+        await client.query('UPDATE shuttles SET status = $1 WHERE id = $2', ['active', shuttle.id]);
+        const named = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+        const drive = beginCampusDrive(req.user.id, shuttle, named.rows[0]?.name);
+        res.json({
+            success: true,
+            stops_count: drive.stops.length,
+            shuttle,
+            startedAt: drive.startedAt,
+            loopMs: drive.loopMs,
+            route: drive.route,
+            message: 'Route started'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error starting route' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/driver/stop-route', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const active = activeDrivers.get(req.user.id);
+        stopCampusDrive(req.user.id);
+        if (active?.shuttleId) {
+            await client.query('UPDATE shuttles SET status = $1 WHERE id = $2', ['inactive', active.shuttleId]);
+        }
+        activeDrivers.delete(req.user.id);
+        res.json({ success: true, message: 'Route stopped' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error stopping route' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/driver/eta-status', authenticateToken, requireRole(['driver']), (req, res) => {
+    const active = activeDrivers.get(req.user.id);
+    if (!active || !active.stops) return res.json({ success: true, etas: [] });
+    const etas = active.stops.map((stop) => {
+        const distance = (active.latitude && stop.latitude)
+            ? kmBetween(active.latitude, active.longitude, stop.latitude, stop.longitude)
+            : null;
+        return {
+            stop_name: stop.name,
+            distance_km: distance == null ? '--' : distance.toFixed(2),
+            eta_minutes: distance == null ? '--' : Math.max(1, Math.round((distance / 25) * 60))
+        };
+    });
+    res.json({ success: true, etas });
+});
+
+app.post('/api/driver/location-eta', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const latitude = Number(req.body.latitude);
+        const longitude = Number(req.body.longitude);
+        const active = activeDrivers.get(req.user.id);
+        if (!active) return res.status(400).json({ success: false, message: 'Start a route first' });
+        await client.query(
+            'UPDATE shuttles SET current_latitude = $1, current_longitude = $2, status = $3 WHERE id = $4',
+            [latitude, longitude, 'active', active.shuttleId]
+        );
+        activeDrivers.set(req.user.id, { ...active, latitude, longitude, timestamp: Date.now() });
+        io.emit('shuttle_location_update', {
+            driverId: req.user.id,
+            shuttleId: active.shuttleId,
+            latitude,
+            longitude,
+            routeName: active.routeName,
+            timestamp: Date.now()
+        });
+        const alerts = (active.stops || []).filter((stop) => stop.latitude && kmBetween(latitude, longitude, stop.latitude, stop.longitude) <= 0.4)
+            .map((stop) => ({
+                location: stop.name,
+                eta_minutes: 1,
+                students_notified: 1
+            }));
+        res.json({ success: true, alerts_sent: alerts.length, alerts });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating location' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/driver/change-password', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+        const user = await client.query('SELECT password FROM users WHERE id = $1', [req.user.id]);
+        const matches = await bcrypt.compare(currentPassword || '', user.rows[0].password);
+        if (!matches) return res.status(400).json({ success: false, message: 'Current password is wrong' });
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.user.id]);
+        res.json({ success: true, message: 'Password changed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/stats', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const counts = await client.query(`
+            SELECT
+                (SELECT COUNT(*) FROM users) AS total_users,
+                (SELECT COUNT(*) FROM users WHERE role = 'student') AS students,
+                (SELECT COUNT(*) FROM users WHERE role = 'driver') AS drivers,
+                (SELECT COUNT(*) FROM shuttles) AS shuttles,
+                (SELECT COUNT(*) FROM shuttles WHERE status = 'active') AS active_shuttles,
+                (SELECT COUNT(*) FROM trips) AS trips,
+                (SELECT COUNT(*) FROM trips WHERE created_at::date = CURRENT_DATE) AS today_trips,
+                (SELECT COUNT(*) FROM trips WHERE created_at >= date_trunc('month', CURRENT_DATE)) AS month_trips
+        `);
+        const row = counts.rows[0];
+        res.json({
+            success: true,
+            stats: {
+                totalUsers: Number(row.total_users),
+                totalStudents: Number(row.students),
+                totalDrivers: Number(row.drivers),
+                totalShuttles: Number(row.shuttles),
+                activeShuttles: Number(row.active_shuttles),
+                todayTrips: Number(row.today_trips),
+                monthlyTrips: Number(row.month_trips),
+                totalTrips: Number(row.trips)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/all-users', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id, name, email, phone, role, status, created_at, last_login FROM users ORDER BY created_at DESC'
+        );
+        res.json({ success: true, users: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/admin/add-user', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { name, email, phone, password, role } = req.body;
+        if (!name || !email || !password || !role) {
+            return res.status(400).json({ success: false, message: 'Name, email, password, and role are required' });
+        }
+        const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (existing.rows[0]) return res.status(400).json({ success: false, message: 'Email already exists' });
+        const hashed = await bcrypt.hash(password, 10);
+        const result = await client.query(
+            'INSERT INTO users (name, email, phone, password, role, is_verified) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, name, email, role',
+            [name, email, phone || null, hashed, role]
+        );
+        res.json({ success: true, user: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not add user' });
+    } finally {
+        client.release();
+    }
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        if (Number(req.params.id) === Number(req.user.id)) {
+            return res.status(400).json({ success: false, message: 'You cannot delete your own account' });
+        }
+        await client.query('DELETE FROM trips WHERE student_id = $1 OR driver_id = $1', [req.params.id]);
+        await client.query('UPDATE shuttles SET driver_id = NULL WHERE driver_id = $1', [req.params.id]);
+        await client.query('DELETE FROM password_resets WHERE user_id = $1', [req.params.id]);
+        const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING id', [req.params.id]);
+        if (!result.rows[0]) return res.status(404).json({ success: false, message: 'User not found' });
+        res.json({ success: true, message: 'User deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not delete user. They may still have messages or friends.' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/admin/shuttles', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const vehicle = req.body.vehicle_number;
+        if (!vehicle) return res.status(400).json({ success: false, message: 'Vehicle number is required' });
+        const result = await client.query(
+            'INSERT INTO shuttles (vehicle_number, model, capacity, status) VALUES ($1, $2, $3, $4) RETURNING *',
+            [vehicle, req.body.model || 'Campus bus', req.body.capacity || 14, 'inactive']
+        );
+        res.json({ success: true, shuttle: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not add shuttle. That number may already exist.' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/admin/assign-driver', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const driver = await client.query(`SELECT id, name FROM users WHERE email = $1 AND role = 'driver'`, [req.body.email]);
+        if (!driver.rows[0]) return res.status(404).json({ success: false, message: 'Driver not found' });
+        const shuttle = await client.query(
+            'UPDATE shuttles SET driver_id = $1 WHERE vehicle_number = $2 RETURNING *',
+            [driver.rows[0].id, req.body.vehicle_number]
+        );
+        if (!shuttle.rows[0]) return res.status(404).json({ success: false, message: 'Shuttle not found' });
+        res.json({ success: true, shuttle: shuttle.rows[0], driver: driver.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not assign driver' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/drivers', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT u.id, u.name, u.email, u.phone, u.license_number AS license,
+                   string_agg(s.vehicle_number, ', ') AS shuttle,
+                   MAX(s.status) AS shuttle_status,
+                   (SELECT COUNT(*) FROM trips t WHERE t.driver_id = u.id) AS trips
+            FROM users u
+            LEFT JOIN shuttles s ON s.driver_id = u.id
+            WHERE u.role = 'driver'
+            GROUP BY u.id
+            ORDER BY u.name
+        `);
+        res.json({ success: true, drivers: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/driver-locations', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT u.id, u.name, s.vehicle_number AS shuttle, s.status, s.current_latitude, s.current_longitude
+            FROM users u
+            LEFT JOIN shuttles s ON s.driver_id = u.id
+            WHERE u.role = 'driver'
+            ORDER BY u.name
+        `);
+        const drivers = result.rows.map((row) => {
+            const live = activeDrivers.get(row.id);
+            const lat = live?.latitude || row.current_latitude;
+            const lng = live?.longitude || row.current_longitude;
+            const online = row.status === 'active' || !!live;
+            return {
+                id: row.id,
+                name: row.name,
+                shuttle: row.shuttle || 'Unassigned',
+                status: online ? 'online' : 'offline',
+                latitude: lat,
+                longitude: lng,
+                lat: lat ? Math.max(8, Math.min(92, ((Number(lat) - 5.103) / 0.006) * 100)) : 0,
+                lng: lng ? Math.max(8, Math.min(92, ((Number(lng) + 1.197) / 0.006) * 100)) : 0,
+                speed: live ? 25 : 0,
+                lastUpdate: live?.timestamp ? new Date(live.timestamp) : null
+            };
+        });
+        res.json({ success: true, drivers });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/trips', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT t.*, su.name AS student_name, du.name AS driver_name, s.vehicle_number
+            FROM trips t
+            LEFT JOIN users su ON su.id = t.student_id
+            LEFT JOIN users du ON du.id = t.driver_id
+            LEFT JOIN shuttles s ON s.id = t.shuttle_id
+            ORDER BY t.created_at DESC
+            LIMIT 100
+        `);
+        res.json({ success: true, trips: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/report/:type', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const type = req.params.type;
+        let lines = [`UCC Shuttle Tracker ${type} report`, `Generated ${new Date().toISOString()}`, ''];
+        if (type === 'users') {
+            const rows = await client.query('SELECT name, email, role, created_at FROM users ORDER BY created_at DESC');
+            lines.push('name,email,role,created_at');
+            rows.rows.forEach((r) => lines.push(`${r.name},${r.email},${r.role},${r.created_at.toISOString()}`));
+        } else if (type === 'shuttles') {
+            const rows = await client.query('SELECT vehicle_number, status, driver_id FROM shuttles ORDER BY vehicle_number');
+            lines.push('vehicle,status,driver_id');
+            rows.rows.forEach((r) => lines.push(`${r.vehicle_number},${r.status},${r.driver_id || ''}`));
+        } else if (type === 'trips' || type === 'revenue') {
+            const rows = await client.query('SELECT id, status, fare, pickup_location, destination, created_at FROM trips ORDER BY created_at DESC');
+            lines.push('id,status,fare,pickup,destination,created_at');
+            rows.rows.forEach((r) => lines.push(`${r.id},${r.status},${r.fare},${r.pickup_location},${r.destination},${r.created_at.toISOString()}`));
+        } else {
+            return res.status(404).json({ success: false, message: 'Unknown report' });
+        }
+        res.type('text/plain').send(lines.join('\n'));
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/admin/settings', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query('SELECT key, value FROM system_settings');
+        const settings = {};
+        result.rows.forEach((row) => { settings[row.key] = row.value; });
+        res.json({ success: true, settings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/admin/settings', authenticateToken, requireRole(['admin']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const entries = Object.entries(req.body || {});
+        for (const [key, value] of entries) {
+            await client.query(
+                `INSERT INTO system_settings (key, value) VALUES ($1, $2)
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+                [key, String(value)]
+            );
+        }
+        res.json({ success: true, message: 'Settings saved' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not save settings' });
     } finally {
         client.release();
     }

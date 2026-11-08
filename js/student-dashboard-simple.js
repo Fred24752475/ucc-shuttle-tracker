@@ -118,7 +118,7 @@ class StudentDashboard {
 
             this.map = L.map('shuttleMap').setView([5.1044, -1.1947], 14);
             
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(this.map);
@@ -1337,7 +1337,7 @@ class StudentDashboard {
                 // Initialize mini map
                 this.miniMap = L.map('miniMap').setView([5.1044, -1.1947], 14);
                 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '© OpenStreetMap contributors',
                     maxZoom: 19
                 }).addTo(this.miniMap);
@@ -1720,7 +1720,7 @@ function initializeDirectMap() {
     try {
         window.directMap = L.map('shuttleMap').setView([5.6037, -0.1870], 15);
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(window.directMap);
