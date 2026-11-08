@@ -49,8 +49,6 @@ class StudentFriendsSystem {
         });
         const search = document.getElementById('studentSearch');
         if (search) search.addEventListener('input', () => this.filterPeople());
-        const send = document.getElementById('sendMessageBtn');
-        if (send) send.addEventListener('click', () => this.sendMessage());
         const input = document.getElementById('messageInput');
         if (input) {
             input.addEventListener('keydown', (event) => {

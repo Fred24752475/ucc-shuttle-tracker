@@ -13,6 +13,10 @@ const path = require('path');
 const multer = require('multer');
 const pool = require('./database/postgres');
 
+process.on('unhandledRejection', () => {
+    console.error('A request failed and the server stayed up');
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -444,8 +448,8 @@ async function sendEmailCode(req, res) {
         `, [email, code, purpose, expiresAt]);
         if (purpose === 'reset') {
             const user = await client.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
-            await client.query(
-                'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
+        await client.query(
+            'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
                 [user.rows[0].id, code, expiresAt]
             );
         }
@@ -786,11 +790,11 @@ function chatPerson(row) {
 }
 
 async function usersByRole(client, role, exceptId) {
-    const result = await client.query(`
+        const result = await client.query(`
         SELECT id, name, email, role, student_id, profile_image
-        FROM users
+            FROM users 
         WHERE role = $1 AND id != $2
-        ORDER BY name ASC
+            ORDER BY name ASC
     `, [role, exceptId]);
     return result.rows.map(chatPerson);
 }
@@ -806,8 +810,9 @@ app.get('/api/chat/directory', authenticateToken, async (req, res) => {
     if (req.user.role !== 'student' && req.user.role !== 'driver') {
         return res.status(403).json({ success: false, message: 'Chat is for students and drivers' });
     }
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         const students = await usersByRole(client, 'student', req.user.id);
         const drivers = await usersByRole(client, 'driver', req.user.id);
         const links = await client.query(`
@@ -871,10 +876,10 @@ app.get('/api/chat/directory', authenticateToken, async (req, res) => {
             conversations
         });
     } catch (error) {
-        console.error('Error loading chat directory:', error);
-        res.status(500).json({ success: false, message: 'Could not load chat' });
+        console.error('Error loading chat directory');
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Could not load chat' });
     } finally {
-        client.release();
+        if (client) client.release();
     }
 });
 
@@ -924,9 +929,9 @@ app.post('/api/friends/request', authenticateToken, async (req, res) => {
                 WHERE id = $3
             `, [req.user.id, receiverId, existing.rows[0].id]);
         } else {
-            await client.query(`
-                INSERT INTO friendships (requester_id, receiver_id, status) 
-                VALUES ($1, $2, 'pending')
+        await client.query(`
+            INSERT INTO friendships (requester_id, receiver_id, status) 
+            VALUES ($1, $2, 'pending')
             `, [req.user.id, receiverId]);
         }
         
