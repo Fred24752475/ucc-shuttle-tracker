@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const pool = require('./database/postgres');
+const { buildCodeEmail } = require('./email-code');
 
 process.on('unhandledRejection', () => {
     console.error('A request failed and the server stayed up');
@@ -206,31 +207,46 @@ function requireAppPassword(req, res) {
     return true;
 }
 
-// Email transporter
+// Email transporter. Port 587 is tried first because some hosts hang on 465.
 const EMAIL_USER = process.env.EMAIL_USER || 'fredrickokyere60@gmail.com';
-const emailTransporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: EMAIL_USER,
-        pass: (process.env.EMAIL_PASS || process.env.APP_PASSWORD || '').replace(/\s+/g, '')
-    }
-});
+const EMAIL_PASS = (process.env.EMAIL_PASS || process.env.APP_PASSWORD || '').replace(/\s+/g, '');
+
+function mailTransport(port) {
+    return nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port,
+        secure: port === 465,
+        auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+        connectionTimeout: 12000,
+        greetingTimeout: 12000,
+        socketTimeout: 20000
+    });
+}
+
+const emailTransports = [mailTransport(587), mailTransport(465)];
 
 function sixDigitCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 async function deliverCode(to, code, purpose) {
-    const subject = purpose === 'signup'
-        ? 'Your UCC Shuttle verification code'
-        : 'Your UCC Shuttle reset code';
-    await emailTransporter.sendMail({
-        from: `UCC Shuttle <${EMAIL_USER}>`,
-        to,
-        subject,
-        text: `Your code is ${code}. It expires in 15 minutes.`,
-        html: `<p>Your UCC Shuttle code is</p><p style="font-size:28px;letter-spacing:8px;font-weight:700">${code}</p><p>It expires in 15 minutes.</p>`
-    });
+    const message = buildCodeEmail(code, purpose, to);
+    let lastError = null;
+    for (const transport of emailTransports) {
+        try {
+            await transport.sendMail({
+                from: `UCC Shuttle <${EMAIL_USER}>`,
+                to,
+                subject: message.subject,
+                text: message.text,
+                html: message.html
+            });
+            return;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    throw lastError || new Error('Email was not accepted');
 }
 
 // Auth middleware
@@ -417,44 +433,48 @@ async function sendEmailCode(req, res) {
     try {
         const email = String(req.body.email || '').trim().toLowerCase();
         const purpose = req.body.purpose === 'signup' ? 'signup' : 'reset';
-        if (!email) return res.status(400).json({ success: false, message: 'Enter your email' });
-        const recent = await client.query(`
-            SELECT id FROM email_verifications
-            WHERE lower(email) = $1 AND purpose = $2 AND created_at > NOW() - INTERVAL '30 seconds'
-            LIMIT 1
-        `, [email, purpose]);
-        if (recent.rows[0]) {
-            return res.status(429).json({ success: false, message: 'Wait a moment before asking for another code' });
-        }
+        if (!email || !email.includes('@')) return res.status(400).json({ success: false, message: 'Enter the email address you want the code sent to' });
+        let userId = null;
         if (purpose === 'signup') {
             const existing = await client.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
-            if (existing.rows[0]) return res.status(400).json({ success: false, message: 'This email already has an account' });
+            if (existing.rows[0]) return res.status(400).json({ success: false, message: 'This email already has an account. Sign in, or reset the password.' });
         } else {
             const existing = await client.query('SELECT id, role FROM users WHERE lower(email) = $1', [email]);
             if (!existing.rows[0]) return res.status(404).json({ success: false, message: 'No account uses that email' });
             if (existing.rows[0].role === 'admin') {
                 return res.status(403).json({ success: false, message: 'Admin resets are handled by the school office' });
             }
+            userId = existing.rows[0].id;
         }
-        const code = sixDigitCode();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-        await client.query(`
-            UPDATE email_verifications SET used = true
-            WHERE lower(email) = $1 AND purpose = $2 AND used = false
+        const live = await client.query(`
+            SELECT code, (created_at > NOW() - INTERVAL '30 seconds') AS just_sent
+            FROM email_verifications
+            WHERE lower(email) = $1 AND purpose = $2 AND used = false AND expires_at > NOW()
+            ORDER BY created_at DESC LIMIT 1
         `, [email, purpose]);
-        await client.query(`
-            INSERT INTO email_verifications (email, code, purpose, expires_at)
-            VALUES ($1, $2, $3, $4)
-        `, [email, code, purpose, expiresAt]);
-        if (purpose === 'reset') {
-            const user = await client.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
-        await client.query(
-            'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
-                [user.rows[0].id, code, expiresAt]
-            );
+        if (live.rows[0] && live.rows[0].just_sent) {
+            return res.status(429).json({ success: false, message: 'A code was just sent. Check your inbox and spam, then wait a moment before asking again.' });
         }
+        const code = live.rows[0] ? live.rows[0].code : sixDigitCode();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
         await deliverCode(email, code, purpose);
-        res.json({ success: true, message: 'Code sent. Check your email.' });
+        if (!live.rows[0]) {
+            await client.query(`
+                UPDATE email_verifications SET used = true
+                WHERE lower(email) = $1 AND purpose = $2 AND used = false
+            `, [email, purpose]);
+            await client.query(`
+                INSERT INTO email_verifications (email, code, purpose, expires_at)
+                VALUES ($1, $2, $3, $4)
+            `, [email, code, purpose, expiresAt]);
+            if (purpose === 'reset') {
+                await client.query(
+                    'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
+                    [userId, code, expiresAt]
+                );
+            }
+        }
+        res.json({ success: true, message: 'Code sent. Check your inbox and your spam folder.' });
     } catch (error) {
         console.error('Send code error:', error.message);
         res.status(502).json({ success: false, message: 'The code could not be emailed. Try again.' });
