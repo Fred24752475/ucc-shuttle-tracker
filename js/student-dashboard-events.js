@@ -582,18 +582,14 @@ function getAIResponse(message) {
 
 // ============= DATA LOADING FUNCTIONS =============
 function loadUserInfo() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(localStorage.getItem('ucc_user') || localStorage.getItem('user') || '{}');
     currentUser = user;
 
     const userName = document.getElementById('userName');
     const studentName = document.getElementById('studentName');
 
-    if (userName && user.name) {
-        userName.textContent = user.name;
-    }
-    if (studentName && user.name) {
-        studentName.textContent = user.name.split(' ')[0];
-    }
+    if (userName && user.name) userName.textContent = user.name;
+    if (studentName && user.name) studentName.textContent = user.name;
 }
 
 function loadRides() {

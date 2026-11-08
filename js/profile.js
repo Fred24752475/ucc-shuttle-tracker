@@ -10,20 +10,31 @@ function paintAccountPhoto(url) {
     });
 }
 
+function paintAccountName(name) {
+    if (!name) return;
+    ['userName', 'studentName', 'driverName', 'adminName', 'supportName'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = name;
+    });
+}
+
 function rememberAccount(user) {
     const current = savedAccount() || {};
     const next = { ...current, ...user };
     if (!user.profileImage && current.profileImage) next.profileImage = current.profileImage;
+    if (!user.name && current.name) next.name = current.name;
     localStorage.setItem('ucc_user', JSON.stringify(next));
     paintAccountPhoto(next.profileImage);
-    const name = document.getElementById('userName');
-    if (name && next.name) name.textContent = next.name;
+    paintAccountName(next.name);
 }
 
 async function loadAccount() {
     const token = localStorage.getItem('ucc_token');
     const cached = savedAccount();
-    if (cached) paintAccountPhoto(cached.profileImage);
+    if (cached) {
+        paintAccountPhoto(cached.profileImage);
+        paintAccountName(cached.name);
+    }
     if (!token) return cached;
     const response = await fetch('/api/users/profile', { headers: { Authorization: 'Bearer ' + token } });
     const data = await response.json();

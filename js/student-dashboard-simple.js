@@ -558,7 +558,7 @@ class StudentDashboard {
         const studentName = document.getElementById('studentName');
         
         if (this.userData) {
-            const displayName = this.userData.name || this.userData.firstName + ' ' + this.userData.lastName || 'Student';
+            const displayName = this.userData.name || [this.userData.firstName, this.userData.lastName].filter(Boolean).join(' ');
             
             if (userName) userName.textContent = displayName;
             if (studentName) studentName.textContent = displayName;

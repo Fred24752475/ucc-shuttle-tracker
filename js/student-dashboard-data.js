@@ -42,11 +42,11 @@ async function loadDashboardData() {
         // Load profile for name
         const profileData = await apiRequest('/student/profile');
         if (profileData.success && profileData.profile) {
-            const first = (profileData.profile.name || 'Student').split(' ')[0];
+            const fullName = profileData.profile.name;
             const studentName = document.getElementById('studentName');
             const userName = document.getElementById('userName');
-            if (studentName) studentName.textContent = first;
-            if (userName) userName.textContent = profileData.profile.name;
+            if (studentName && fullName) studentName.textContent = fullName;
+            if (userName && fullName) userName.textContent = fullName;
         }
 
         // Load active shuttles count
