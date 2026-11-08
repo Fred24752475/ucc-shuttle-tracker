@@ -48,6 +48,7 @@
                     <label>Code from your email</label>
                     <div id="codeBoxes"></div>
                 </div>
+                <button class="btn-login" id="checkCodeBtn" type="button">Continue</button>
                 <button class="step-link" id="resendBtn" type="button">Send the code again</button>
                 <div id="detailsStep" class="hidden-step">
                     <p class="step-note">Now set your password and finish the account.</p>
@@ -78,11 +79,8 @@
     </section>
     <script>
         const errorMsg = document.getElementById('errorMsg');
-        const boxes = createCodeBoxes(document.getElementById('codeBoxes'), {
-            onChange: () => {
-                if (boxes.code().length === 6) document.getElementById('detailsStep').classList.remove('hidden-step');
-            }
-        });
+        const boxes = createCodeBoxes(document.getElementById('codeBoxes'));
+        let codeChecked = '';
         let role = new URLSearchParams(location.search).get('role') === 'driver' ? 'driver' : 'student';
         document.querySelectorAll('.role-choice button').forEach((button) => {
             button.classList.toggle('active', button.getAttribute('data-role') === role);
@@ -143,7 +141,40 @@
                 showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
             }
         });
+        document.getElementById('checkCodeBtn').addEventListener('click', async () => {
+            const button = document.getElementById('checkCodeBtn');
+            const email = document.getElementById('email').value.trim();
+            const code = boxes.code();
+            if (code.length !== 6) return showError('Enter all 6 digits from the email');
+            if (codeChecked === code) {
+                document.getElementById('detailsStep').classList.remove('hidden-step');
+                return;
+            }
+            button.disabled = true;
+            button.textContent = 'Checking the code...';
+            try {
+                const response = await fetch('/api/auth/check-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code, purpose: 'signup' })
+                });
+                const data = await response.json();
+                if (!data.success) throw new Error(data.message || 'That code is not right');
+                codeChecked = code;
+                errorMsg.style.display = 'none';
+                document.getElementById('detailsStep').classList.remove('hidden-step');
+                document.getElementById('name').focus();
+            } catch (error) {
+                document.getElementById('detailsStep').classList.add('hidden-step');
+                const text = String(error && error.message || '');
+                showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
+            }
+            button.disabled = false;
+            button.textContent = 'Continue';
+        });
         document.getElementById('changeEmailBtn').addEventListener('click', () => {
+            codeChecked = '';
+            document.getElementById('detailsStep').classList.add('hidden-step');
             document.getElementById('accountForm').classList.add('hidden-step');
             document.getElementById('emailForm').classList.remove('hidden-step');
             document.getElementById('email').focus();

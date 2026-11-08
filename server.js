@@ -520,6 +520,37 @@ async function sendEmailCode(req, res) {
     }
 }
 
+app.post('/api/auth/check-code', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const email = String(req.body.email || '').trim().toLowerCase();
+        const code = String(req.body.code || '').replace(/\D/g, '');
+        const purpose = req.body.purpose === 'reset' ? 'reset' : 'signup';
+        if (!email || code.length !== 6) {
+            return res.status(400).json({ success: false, message: 'Enter the 6-digit code from your email' });
+        }
+        const saved = await client.query(`
+            SELECT id FROM email_verifications
+            WHERE lower(email) = $1 AND code = $2 AND purpose = $3
+              AND used = false AND expires_at > NOW()
+            LIMIT 1
+        `, [email, code, purpose]);
+        if (!saved.rows[0]) {
+            const ok = await verifySupabaseCode(email, code);
+            if (!ok) return res.status(400).json({ success: false, message: 'That code is not right. Check the email and try again.' });
+            await client.query(
+                'INSERT INTO email_verifications (email, code, purpose, expires_at) VALUES ($1, $2, $3, $4)',
+                [email, code, purpose, new Date(Date.now() + 15 * 60 * 1000)]
+            );
+        }
+        res.json({ success: true, message: 'Code verified' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'The code could not be checked. Try again.' });
+    } finally {
+        client.release();
+    }
+});
+
 app.post('/api/auth/send-code', sendEmailCode);
 app.post('/api/auth/forgot-password', (req, res) => {
     req.body.purpose = 'reset';
