@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
-<body>
+<body class="admin-app">
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -101,7 +101,8 @@
         <header class="top-header">
             <div class="header-content">
                 <div class="welcome-message">
-                    <h1 data-translate="welcome-back">Welcome back, <span id="adminName">Admin</span>! 👋</h1>
+                    <button class="phone-menu" type="button" onclick="document.getElementById('sidebar').classList.toggle('open')">Menu</button>
+                    <h1 data-translate="welcome-back">Welcome back, <span id="adminName">Admin</span></h1>
                     <p>System administration and management dashboard</p>
                 </div>
                 <div class="header-stats">
