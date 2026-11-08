@@ -73,6 +73,10 @@
                 <label>Confirm Password *</label>
                 <input type="password" id="confirmPassword" required minlength="6" placeholder="Re-enter password">
             </div>
+            <div class="form-group">
+                <label>App Password *</label>
+                <input type="password" id="appPassword" required placeholder="App password from your administrator">
+            </div>
             <button type="submit" class="btn-register" id="submitBtn">Create Account</button>
         </form>
         
@@ -108,6 +112,7 @@
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
+            const appPassword = document.getElementById('appPassword').value;
             const errorMsg = document.getElementById('errorMsg');
             const successMsg = document.getElementById('successMsg');
             const submitBtn = document.getElementById('submitBtn');
@@ -135,7 +140,7 @@
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, phone, password, role: selectedRole })
+                    body: JSON.stringify({ name, email, phone, password, role: selectedRole, appPassword })
                 });
                 
                 const data = await response.json();

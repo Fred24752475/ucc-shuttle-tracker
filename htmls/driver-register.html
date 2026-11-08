@@ -377,6 +377,10 @@
                 <input type="password" id="confirmPassword" name="confirmPassword" required
                     placeholder="Re-enter your password">
             </div>
+            <div class="form-group">
+                <label for="appPassword">App Password *</label>
+                <input type="password" id="appPassword" name="appPassword" required placeholder="App password">
+            </div>
 
             <!-- Driver Specific Fields -->
             <div class="driver-fields">
@@ -569,6 +573,7 @@
                 email: document.getElementById('email').value.trim(),
                 phone: document.getElementById('phone').value.trim(),
                 password: document.getElementById('password').value,
+                appPassword: document.getElementById('appPassword').value,
                 role: 'driver', // Hardcoded for driver registration
                 licenseNumber: document.getElementById('licenseNumber').value.trim(),
                 vehicleNumber: document.getElementById('vehicleNumber').value.trim(),

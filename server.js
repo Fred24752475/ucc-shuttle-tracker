@@ -83,12 +83,26 @@ app.use(express.static('.'));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ucc_shuttle_tracker_enhanced_2024';
 
+function requireAppPassword(req, res) {
+    const expected = (process.env.APP_PASSWORD || '').replace(/\s+/g, '').toLowerCase();
+    const given = String(req.body.appPassword || req.body.app_password || '').replace(/\s+/g, '').toLowerCase();
+    if (!expected) {
+        res.status(503).json({ success: false, message: 'App password is not configured' });
+        return false;
+    }
+    if (given !== expected) {
+        res.status(403).json({ success: false, message: 'A valid app password is required' });
+        return false;
+    }
+    return true;
+}
+
 // Email transporter
 const emailTransporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: (process.env.EMAIL_PASS || process.env.APP_PASSWORD || '').replace(/\s+/g, '')
     }
 });
 
@@ -181,6 +195,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/auth/register', async (req, res) => {
+    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
         const { name, email, password, phone, role = 'student' } = req.body;
@@ -208,6 +223,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/register', async (req, res) => {
+    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
         const { name, email, password, phone, role = 'student' } = req.body;
@@ -236,6 +252,7 @@ app.post('/api/register', async (req, res) => {
 
 // Forgot Password - Request reset code
 app.post('/api/auth/forgot-password', async (req, res) => {
+    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
         const { email } = req.body;
@@ -268,7 +285,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             }
         }
         
-        res.json({ success: true, message: 'Reset code sent to your email' });
+        res.json({ success: true, message: 'Reset code sent to your email', resetCode });
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ success: false, message: 'Error processing request' });
@@ -279,6 +296,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
 // Reset Password - Verify code and update password
 app.post('/api/auth/reset-password', async (req, res) => {
+    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
         const { email, resetCode, newPassword } = req.body;
