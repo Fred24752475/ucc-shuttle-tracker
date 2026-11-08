@@ -82,6 +82,24 @@ const io = socketIo(server, {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS password_resets (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            reset_code VARCHAR(10) NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+        await pool.query('ALTER TABLE password_resets ADD COLUMN IF NOT EXISTS used BOOLEAN DEFAULT false');
+        await pool.query(`CREATE TABLE IF NOT EXISTS email_verifications (
+            id SERIAL PRIMARY KEY,
+            email TEXT NOT NULL,
+            code VARCHAR(10) NOT NULL,
+            purpose VARCHAR(20) NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
         console.log('Database connected');
         startDemoFleet();
         console.log('Campus buses running:', demoFleet.size);
@@ -185,13 +203,31 @@ function requireAppPassword(req, res) {
 }
 
 // Email transporter
+const EMAIL_USER = process.env.EMAIL_USER || 'fredrickokyere60@gmail.com';
 const emailTransporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
+        user: EMAIL_USER,
         pass: (process.env.EMAIL_PASS || process.env.APP_PASSWORD || '').replace(/\s+/g, '')
     }
 });
+
+function sixDigitCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function deliverCode(to, code, purpose) {
+    const subject = purpose === 'signup'
+        ? 'Your UCC Shuttle verification code'
+        : 'Your UCC Shuttle reset code';
+    await emailTransporter.sendMail({
+        from: `UCC Shuttle <${EMAIL_USER}>`,
+        to,
+        subject,
+        text: `Your code is ${code}. It expires in 15 minutes.`,
+        html: `<p>Your UCC Shuttle code is</p><p style="font-size:28px;letter-spacing:8px;font-weight:700">${code}</p><p>It expires in 15 minutes.</p>`
+    });
+}
 
 // Auth middleware
 function authenticateToken(req, res, next) {
@@ -281,11 +317,43 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+async function registrationAllowed(client, req, res) {
+    const role = req.body.role || 'student';
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!email) {
+        res.status(400).json({ success: false, message: 'Enter your email' });
+        return null;
+    }
+    if (role === 'admin') {
+        if (!requireAppPassword(req, res)) return null;
+        return { email, role };
+    }
+    if (role !== 'student' && role !== 'driver') {
+        res.status(400).json({ success: false, message: 'Choose student or driver' });
+        return null;
+    }
+    const code = String(req.body.code || '').replace(/\D/g, '');
+    const match = await client.query(`
+        SELECT id FROM email_verifications
+        WHERE lower(email) = $1 AND code = $2 AND purpose = 'signup'
+          AND used = false AND expires_at > NOW()
+        ORDER BY created_at DESC LIMIT 1
+    `, [email, code]);
+    if (!match.rows[0]) {
+        res.status(400).json({ success: false, message: 'Enter the 6-digit code sent to your email' });
+        return null;
+    }
+    await client.query('UPDATE email_verifications SET used = true WHERE id = $1', [match.rows[0].id]);
+    return { email, role };
+}
+
 app.post('/api/auth/register', async (req, res) => {
-    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
-        const { name, email, password, phone, role = 'student' } = req.body;
+        const allowed = await registrationAllowed(client, req, res);
+        if (!allowed) return;
+        const { name, password, phone } = req.body;
+        const { email, role } = allowed;
         
         const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
@@ -310,10 +378,12 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/register', async (req, res) => {
-    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
-        const { name, email, password, phone, role = 'student' } = req.body;
+        const allowed = await registrationAllowed(client, req, res);
+        if (!allowed) return;
+        const { name, password, phone } = req.body;
+        const { email, role } = allowed;
         
         const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
@@ -338,59 +408,80 @@ app.post('/api/register', async (req, res) => {
 });
 
 // Forgot Password - Request reset code
-app.post('/api/auth/forgot-password', async (req, res) => {
-    if (!requireAppPassword(req, res)) return;
+async function sendEmailCode(req, res) {
     const client = await pool.connect();
     try {
-        const { email } = req.body;
-        
-        const result = await client.query('SELECT id FROM users WHERE email = $1', [email]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Email not found' });
+        const email = String(req.body.email || '').trim().toLowerCase();
+        const purpose = req.body.purpose === 'signup' ? 'signup' : 'reset';
+        if (!email) return res.status(400).json({ success: false, message: 'Enter your email' });
+        const recent = await client.query(`
+            SELECT id FROM email_verifications
+            WHERE lower(email) = $1 AND purpose = $2 AND created_at > NOW() - INTERVAL '30 seconds'
+            LIMIT 1
+        `, [email, purpose]);
+        if (recent.rows[0]) {
+            return res.status(429).json({ success: false, message: 'Wait a moment before asking for another code' });
         }
-        
-        const userId = result.rows[0].id;
-        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-        
-        await client.query(
-            'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
-            [userId, resetCode, expiresAt]
-        );
-        
-        // Send email (if configured)
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            try {
-                await emailTransporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: email,
-                    subject: 'Password Reset Code - UCC Shuttle Tracker',
-                    text: `Your password reset code is: ${resetCode}\n\nThis code will expire in 15 minutes.`
-                });
-            } catch (emailError) {
-                console.error('Email error:', emailError);
+        if (purpose === 'signup') {
+            const existing = await client.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
+            if (existing.rows[0]) return res.status(400).json({ success: false, message: 'This email already has an account' });
+        } else {
+            const existing = await client.query('SELECT id, role FROM users WHERE lower(email) = $1', [email]);
+            if (!existing.rows[0]) return res.status(404).json({ success: false, message: 'No account uses that email' });
+            if (existing.rows[0].role === 'admin') {
+                return res.status(403).json({ success: false, message: 'Admin resets are handled by the school office' });
             }
         }
-        
-        res.json({ success: true, message: 'Reset code sent to your email', resetCode });
+        const code = sixDigitCode();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        await client.query(`
+            UPDATE email_verifications SET used = true
+            WHERE lower(email) = $1 AND purpose = $2 AND used = false
+        `, [email, purpose]);
+        await client.query(`
+            INSERT INTO email_verifications (email, code, purpose, expires_at)
+            VALUES ($1, $2, $3, $4)
+        `, [email, code, purpose, expiresAt]);
+        if (purpose === 'reset') {
+            const user = await client.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
+            await client.query(
+                'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES ($1, $2, $3)',
+                [user.rows[0].id, code, expiresAt]
+            );
+        }
+        await deliverCode(email, code, purpose);
+        res.json({ success: true, message: 'Code sent. Check your email.' });
     } catch (error) {
-        console.error('Forgot password error:', error);
-        res.status(500).json({ success: false, message: 'Error processing request' });
+        console.error('Send code error:', error.message);
+        res.status(502).json({ success: false, message: 'The code could not be emailed. Try again.' });
     } finally {
         client.release();
     }
+}
+
+app.post('/api/auth/send-code', sendEmailCode);
+app.post('/api/auth/forgot-password', (req, res) => {
+    req.body.purpose = 'reset';
+    return sendEmailCode(req, res);
 });
 
 // Reset Password - Verify code and update password
 app.post('/api/auth/reset-password', async (req, res) => {
-    if (!requireAppPassword(req, res)) return;
     const client = await pool.connect();
     try {
-        const { email, resetCode, newPassword } = req.body;
+        const email = String(req.body.email || '').trim().toLowerCase();
+        const resetCode = String(req.body.resetCode || req.body.code || '').replace(/\D/g, '');
+        const { newPassword } = req.body;
         
-        const userResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
+        if (!newPassword || String(newPassword).length < 6) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+        }
+        const userResult = await client.query('SELECT id, role FROM users WHERE lower(email) = $1', [email]);
+        if (!userResult.rows[0]) {
             return res.status(404).json({ success: false, message: 'Email not found' });
+        }
+        if (userResult.rows[0].role === 'admin') {
+            return res.status(403).json({ success: false, message: 'Admin resets are handled by the school office' });
         }
         
         const userId = userResult.rows[0].id;
@@ -407,6 +498,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
         await client.query('UPDATE password_resets SET used = true WHERE id = $1', [resetResult.rows[0].id]);
+        await client.query(`
+            UPDATE email_verifications SET used = true
+            WHERE lower(email) = $1 AND code = $2 AND purpose = 'reset'
+        `, [email, resetCode]);
         
         res.json({ success: true, message: 'Password reset successful' });
     } catch (error) {
