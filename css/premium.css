@@ -723,8 +723,13 @@ input:focus, select:focus, textarea:focus {
     cursor: pointer;
 }
 
-.profile-section { background: #fff !important; padding: 0 !important; }
-.me-pane { background: #fff; min-height: 70vh; }
+.profile-section { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+.me-pane { background: #fff; margin: 0; }
+#aiAssistantSection,
+#helpSection,
+.nav-item[data-section="ai-assistant"],
+.nav-item[data-section="help"],
+.nav-item[data-section="support"] { display: none !important; }
 .me-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 8px 8px 0; }
 .me-bar h2 { margin: 0; text-align: center; font-size: 18px; font-weight: 700; }
 .me-icon, .me-save { border: 0; background: transparent; font-size: 28px; line-height: 1; cursor: pointer; color: #111; }
@@ -882,7 +887,20 @@ input:focus, select:focus, textarea:focus {
         overflow: visible !important;
     }
 
-    main.profile-section { padding: 0 !important; background: #fff !important; }
+    main.profile-section {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 50 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-y: auto !important;
+        background: #fff !important;
+    }
 
     main.messages-section,
     main#aiAssistantSection {
