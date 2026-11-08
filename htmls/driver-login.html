@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Driver Login - UCC Shuttle Tracker</title>
     <link rel="stylesheet" href="../css/premium.css">
+    <script src="../js/verify-code.js"></script>
     <script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
     <script>
         const API_CONFIG = { API_URL: '' };
@@ -60,8 +61,7 @@
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
             const button = e.target.querySelector('button');
-            button.disabled = true;
-            button.textContent = 'Signing in...';
+            setBusy(button, true, 'Signing in...');
             errorMsg.style.display = 'none';
 
             try {
@@ -86,17 +86,13 @@
                     ? 'This page is for drivers. Use the student or admin sign in.'
                     : 'That email or password is not right. Try again, or reset your password.';
                 errorMsg.style.display = 'block';
-                button.disabled = false;
-                button.textContent = 'Login';
+                setBusy(button, false);
             } catch (error) {
                 const button = e.target.querySelector('button');
                 errorMsg.className = 'error';
                 errorMsg.textContent = 'We could not reach the shuttle service. Check your internet and try again.';
                 errorMsg.style.display = 'block';
-                if (button) {
-                    button.disabled = false;
-                    button.textContent = 'Login';
-                }
+                setBusy(button, false);
             }
         });
     </script>

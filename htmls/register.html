@@ -117,17 +117,18 @@
             const button = document.getElementById('sendBtn');
             const email = document.getElementById('email').value.trim();
             if (!email) return showError('Enter the email address you want the code sent to');
-            button.disabled = true;
-            button.textContent = 'Sending code...';
-            openCodeStep(email);
+            setBusy(button, true, 'Sending code...');
+            showWait('Sending the code to your email. Please wait.');
             try {
                 await sendCode();
+                showWait('');
+                openCodeStep(email);
             } catch (error) {
+                showWait('');
                 const text = String(error && error.message || '');
                 showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
             }
-            button.disabled = false;
-            button.textContent = 'Send code';
+            setBusy(button, false);
         });
         document.getElementById('resendBtn').addEventListener('click', async () => {
             try {
@@ -150,8 +151,8 @@
                 document.getElementById('detailsStep').classList.remove('hidden-step');
                 return;
             }
-            button.disabled = true;
-            button.textContent = 'Checking the code...';
+            setBusy(button, true, 'Checking the code...');
+            showWait('Checking the code. Please wait.');
             try {
                 const response = await fetch('/api/auth/check-code', {
                     method: 'POST',
@@ -162,15 +163,16 @@
                 if (!data.success) throw new Error(data.message || 'That code is not right');
                 codeChecked = code;
                 errorMsg.style.display = 'none';
+                showWait('');
                 document.getElementById('detailsStep').classList.remove('hidden-step');
                 document.getElementById('name').focus();
             } catch (error) {
+                showWait('');
                 document.getElementById('detailsStep').classList.add('hidden-step');
                 const text = String(error && error.message || '');
                 showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
             }
-            button.disabled = false;
-            button.textContent = 'Continue';
+            setBusy(button, false);
         });
         document.getElementById('changeEmailBtn').addEventListener('click', () => {
             codeChecked = '';
@@ -181,9 +183,12 @@
         });
         document.getElementById('accountForm').addEventListener('submit', async (event) => {
             event.preventDefault();
+            const button = event.target.querySelector('button[type="submit"]');
             const password = document.getElementById('password').value;
             if (password !== document.getElementById('confirmPassword').value) return showError('Passwords do not match');
             if (boxes.code().length !== 6) return showError('Enter all 6 digits');
+            setBusy(button, true, 'Creating account...');
+            showWait('Creating your account. Please wait.');
             const response = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -197,7 +202,12 @@
                 })
             });
             const data = await response.json();
-            if (!data.success) return showError(data.message || 'Could not create the account');
+            if (!data.success) {
+                showWait('');
+                setBusy(button, false);
+                return showError(data.message || 'Could not create the account');
+            }
+            showWait('');
             const ok = document.getElementById('okMsg');
             ok.textContent = 'Account created. Taking you to sign in.';
             ok.style.display = 'block';

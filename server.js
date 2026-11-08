@@ -577,7 +577,16 @@ app.post('/api/auth/reset-password', async (req, res) => {
         }
         
         const userId = userResult.rows[0].id;
-        const mailed = await verifySupabaseCode(email, resetCode);
+        const saved = await client.query(`
+            SELECT id FROM email_verifications
+            WHERE lower(email) = $1 AND code = $2 AND purpose = 'reset'
+              AND used = false AND expires_at > NOW()
+            LIMIT 1
+        `, [email, resetCode]);
+        const mailed = saved.rows[0] ? true : await verifySupabaseCode(email, resetCode);
+        if (saved.rows[0]) {
+            await client.query('UPDATE email_verifications SET used = true WHERE id = $1', [saved.rows[0].id]);
+        }
         const resetResult = mailed ? { rows: [] } : await client.query(
             'SELECT * FROM password_resets WHERE user_id = $1 AND reset_code = $2 AND used = false AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
             [userId, resetCode]

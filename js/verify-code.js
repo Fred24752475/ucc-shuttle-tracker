@@ -1,3 +1,25 @@
+function setBusy(button, busy, label) {
+    if (!button) return;
+    if (!button.dataset.idle) button.dataset.idle = button.textContent;
+    button.disabled = !!busy;
+    button.classList.toggle('is-loading', !!busy);
+    button.setAttribute('aria-busy', busy ? 'true' : 'false');
+    button.textContent = busy ? label : button.dataset.idle;
+}
+
+function showWait(text) {
+    let note = document.getElementById('waitNote');
+    if (!note) {
+        note = document.createElement('p');
+        note.id = 'waitNote';
+        note.className = 'wait-note';
+        const box = document.querySelector('.login-container') || document.body;
+        box.appendChild(note);
+    }
+    note.hidden = !text;
+    note.textContent = text || '';
+}
+
 function createCodeBoxes(root, options) {
     root.classList.add('otp-row');
     root.innerHTML = Array.from({ length: 6 }, (_, index) =>

@@ -233,6 +233,36 @@ body {
     transition: transform 0.15s var(--ease), background 0.15s, box-shadow 0.15s !important;
 }
 
+.btn-login {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+button.is-loading { cursor: progress; }
+button.is-loading::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(18,138,58,.25);
+    border-top-color: #128a3a;
+    border-radius: 50%;
+    animation: btn-spin .7s linear infinite;
+}
+.btn-login.is-loading::before {
+    border-color: rgba(255,255,255,.45);
+    border-top-color: #fff;
+}
+.wait-note {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #eef8f1;
+    color: #0d6b2e;
+    font-size: 14px;
+    line-height: 1.4;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
 .btn-primary, .btn-login, .btn-success, #startRideBtn {
     background: var(--ink) !important;
     color: white !important;
