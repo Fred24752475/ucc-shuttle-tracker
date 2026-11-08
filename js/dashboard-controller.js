@@ -301,7 +301,7 @@ class UCCDashboard {
                 window.routesMap = L.map('routes-map').setView([5.5, -0.2], 13);
                 
                 // Add tile layer
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(window.routesMap);
                 
@@ -383,7 +383,7 @@ class UCCDashboard {
             if (!window.shuttleMap) {
                 window.shuttleMap = L.map('shuttle-map').setView([5.5, -0.2], 13);
                 
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(window.shuttleMap);
             }
@@ -748,7 +748,7 @@ class UCCDashboard {
             if (!window.shuttlesMap) {
                 window.shuttlesMap = L.map('shuttles-map').setView([5.5, -0.2], 13);
                 
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(window.shuttlesMap);
                 

@@ -385,7 +385,7 @@ function initializeMap() {
         // Initialize OpenStreetMap
         shuttleMap = L.map('map').setView([5.1044, -1.1947], 15); // UCC Campus coordinates
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19,
             minZoom: 13

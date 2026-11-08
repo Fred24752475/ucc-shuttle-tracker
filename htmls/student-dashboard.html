@@ -1299,7 +1299,7 @@ function showMapError() {
                         console.log('✅ Real map created successfully');
 
                         // Add OpenStreetMap tiles with improved loading for Ghana
-                        const osmTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        const osmTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             attribution: '© OpenStreetMap contributors',
                             maxZoom: 18,
                             minZoom: 3,
@@ -1317,7 +1317,7 @@ function showMapError() {
                         osmTiles.on('tileerror', function(e) {
                             console.warn('⚠️ Primary tile failed, using backup...');
                             // Try alternative tile server
-                            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                 attribution: '© OpenStreetMap contributors',
                                 maxZoom: 18,
                                 minZoom: 3
@@ -1484,7 +1484,7 @@ function showMapError() {
                 try {
                     if (!window.simpleMap) {
                         window.simpleMap = L.map('shuttleMap').setView([5.6037, -0.1870], 15);
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             attribution: '© OpenStreetMap contributors',
                             maxZoom: 19
                         }).addTo(window.simpleMap);

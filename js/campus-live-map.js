@@ -146,11 +146,14 @@
         el.style.setProperty('min-height', '420px', 'important');
         if (!maps[containerId]) {
             const map = L.map(el, { zoomControl: true }).setView([5.1052, -1.1918], 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }).addTo(map);
+            const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            });
+            tiles.on('tileloadstart', (event) => {
+                event.tile.referrerPolicy = 'origin';
+            });
+            tiles.addTo(map);
             map._campusId = containerId;
             maps[containerId] = map;
             const stops = [

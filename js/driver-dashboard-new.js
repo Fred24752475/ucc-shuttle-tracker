@@ -348,7 +348,7 @@ function initializeDriverMap() {
     const map = L.map('driverMap').setView([5.1044, -1.1947], 15);
     
     // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
     
@@ -816,7 +816,7 @@ function showStartTripMap() {
         window.campusMap = L.map('campusMap').setView([5.1044, -1.1947], 15);
         
         // Add OpenStreetMap tiles
-        window.currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        window.currentTileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(window.campusMap);
@@ -967,7 +967,7 @@ function showActiveRouteMap() {
             
             try {
                 window.activeRouteMap = L.map('activeRouteMap').setView([5.1044, -1.1947], 14);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap'
                 }).addTo(window.activeRouteMap);
                 
