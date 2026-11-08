@@ -1074,38 +1074,13 @@ let isListening = false;
 let recognition = null;
 let deferredPrompt = null;
 
-// Theme Management
-function toggleTheme() {
-    isDarkMode = !isDarkMode;
-    document.body.classList.toggle('dark-mode');
+function toggleTheme() {}
 
-    const themeIcon = document.querySelector('.theme-icon');
-    const themeText = document.getElementById('theme-text');
-
-    if (isDarkMode) {
-        themeIcon.textContent = '☀️';
-        themeText.textContent = 'Light';
-        localStorage.setItem('theme', 'dark');
-    } else {
-        themeIcon.textContent = '🌙';
-        themeText.textContent = 'Dark';
-        localStorage.setItem('theme', 'light');
-    }
-}
-
-// Load saved theme preference
 function loadTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-        document.body.classList.add('dark-mode');
-        isDarkMode = true;
-        const themeIcon = document.querySelector('.theme-icon');
-        const themeText = document.getElementById('theme-text');
-        if (themeIcon) themeIcon.textContent = '☀️';
-        if (themeText) themeText.textContent = 'Light';
-    }
+    document.body.classList.remove('dark-mode');
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('theme');
+    localStorage.removeItem('ucc_dark_mode');
 }
 
 // Voice Commands
@@ -1196,9 +1171,6 @@ function processVoiceCommand(command) {
     } else if (command.includes('emergency') || command.includes('help')) {
         response = '🚨 Emergency services notified. Your location has been shared.';
         callEmergency();
-    } else if (command.includes('dark') || command.includes('light')) {
-        toggleTheme();
-        response = `✨ Theme changed to ${isDarkMode ? 'dark' : 'light'} mode.`;
     } else if (command.includes('status') || command.includes('shuttles')) {
         response = '📊 Current status: 3 shuttles active, 1 delayed, 1 offline.';
     } else {
