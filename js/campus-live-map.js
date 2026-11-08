@@ -25,9 +25,23 @@
     function carIcon(bearing) {
         return L.divIcon({
             className: 'campus-car-icon',
-            html: `<div class="campus-car" style="transform: rotate(${bearing + 90}deg)">🚌</div>`,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
+            html: `<div class="campus-bus" style="transform: rotate(${bearing}deg)">
+                <svg viewBox="0 0 32 56" aria-hidden="true">
+                    <rect x="4" y="3" width="24" height="50" rx="7" fill="#128a3a"/>
+                    <rect x="6.5" y="6" width="19" height="9" rx="2.5" fill="#102033"/>
+                    <rect x="7" y="18" width="18" height="18" rx="1.5" fill="#0d3a22" opacity="0.35"/>
+                    <rect x="4" y="24" width="24" height="3.2" fill="#f5c518"/>
+                    <rect x="4" y="27.2" width="24" height="2" fill="#d23b2e"/>
+                    <circle cx="10" cy="8.5" r="1.3" fill="#fff"/>
+                    <circle cx="22" cy="8.5" r="1.3" fill="#fff"/>
+                    <rect x="1" y="14" width="3" height="7" rx="1" fill="#1a1a1a"/>
+                    <rect x="28" y="14" width="3" height="7" rx="1" fill="#1a1a1a"/>
+                    <rect x="1" y="36" width="3" height="7" rx="1" fill="#1a1a1a"/>
+                    <rect x="28" y="36" width="3" height="7" rx="1" fill="#1a1a1a"/>
+                </svg>
+            </div>`,
+            iconSize: [32, 56],
+            iconAnchor: [16, 28]
         });
     }
 
@@ -36,7 +50,8 @@
         const style = document.createElement('style');
         style.id = 'campus-car-style';
         style.textContent = `
-            .campus-car { font-size: 22px; line-height: 36px; text-align: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+            .campus-bus { width: 32px; height: 56px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.45)); }
+            .campus-bus svg { width: 32px; height: 56px; display: block; }
             .you-dot { width: 16px; height: 16px; margin: 6px auto 0; border-radius: 50%; background: #0a66c2; border: 3px solid white; box-shadow: 0 0 0 8px rgba(10,102,194,.25); }
             .you-label { display: none; }
             .leaflet-container { background: #dbe7df; font-family: inherit; }
@@ -67,7 +82,7 @@
         if (!cars[key]) {
             cars[key] = L.marker([lat, lng], { icon, zIndexOffset: 600 })
                 .addTo(map)
-                .bindPopup(`<b>🚌 ${shuttle.vehicle_number || 'Shuttle'}</b><br>${shuttle.driver_name || shuttle.driverName || 'Driver'}<br>${shuttle.routeName || 'Campus Express'}`);
+                .bindPopup(`<b>${shuttle.vehicle_number || 'Shuttle'}</b><br>${shuttle.driver_name || shuttle.driverName || 'Driver'}<br>${shuttle.routeName || 'Campus Express'}`);
         } else {
             cars[key].setLatLng([lat, lng]);
             cars[key].setIcon(icon);
@@ -161,13 +176,6 @@
             map._campusId = containerId;
             maps[containerId] = map;
             const campus = L.latLngBounds([5.104, -1.302], [5.134, -1.272]);
-            L.rectangle(campus, {
-                color: '#0a66c2',
-                weight: 1.5,
-                dashArray: '7 6',
-                fillColor: '#0a66c2',
-                fillOpacity: 0.04
-            }).addTo(map);
             map.fitBounds(campus, { padding: [16, 16] });
             const stops = [
                 [5.1085, -1.2980, 'West Gate'],
