@@ -57,6 +57,10 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
+            const button = e.target.querySelector('button');
+            button.disabled = true;
+            button.textContent = 'Signing in...';
+            errorMsg.style.display = 'none';
 
             try {
                 const response = await fetch(`${API_CONFIG.API_URL}/api/login`, {
@@ -64,29 +68,33 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
-
                 const data = await response.json();
-                console.log('Login response:', data);
 
-                if (data.success) {
-                    // Check if user is an admin
-                    if (data.user.role !== 'admin') {
-                        errorMsg.textContent = 'Access denied. This login is for administrators only. Please use the correct login page for your role.';
-                        errorMsg.style.display = 'block';
-                        return;
-                    }
-                    
+                if (data.success && data.user.role === 'admin') {
                     localStorage.setItem('ucc_token', data.token);
                     localStorage.setItem('ucc_user', JSON.stringify(data.user));
-                    window.location.href = 'admin-dashboard.html';
-                } else {
-                    errorMsg.textContent = data.message || 'Login failed';
+                    errorMsg.className = 'notice';
+                    errorMsg.textContent = 'You are signed in.';
                     errorMsg.style.display = 'block';
+                    setTimeout(() => { window.location.href = 'admin-dashboard.html'; }, 700);
+                    return;
                 }
-            } catch (error) {
-                console.error('Login error:', error);
-                errorMsg.textContent = 'Connection error. Please try again.';
+                errorMsg.className = 'error';
+                errorMsg.textContent = data.success
+                    ? 'This page is for admins. Use the student or driver sign in.'
+                    : 'That email or password is not right. Try again, or reset your password.';
                 errorMsg.style.display = 'block';
+                button.disabled = false;
+                button.textContent = 'Login';
+            } catch (error) {
+                const button = e.target.querySelector('button');
+                errorMsg.className = 'error';
+                errorMsg.textContent = 'We could not reach the shuttle service. Check your internet and try again.';
+                errorMsg.style.display = 'block';
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Login';
+                }
             }
         });
     </script>

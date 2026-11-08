@@ -115,7 +115,7 @@ function startGPSTracking() {
         },
         (error) => {
             console.error('GPS error:', error);
-            showNotification('⚠️ GPS error: ' + error.message, 'error');
+            showNotification('Turn on location for this site, then try again.', 'error');
         },
         {
             enableHighAccuracy: true,

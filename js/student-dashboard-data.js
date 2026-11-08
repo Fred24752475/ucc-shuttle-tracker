@@ -171,7 +171,7 @@ async function bookRide(formData) {
             alert(data.message || 'Could not book that ride');
         }
     } catch (error) {
-        alert(error.message);
+        alert(window.readableProblem ? window.readableProblem(error) : 'That ride could not be booked. Try again.');
     }
 }
 
@@ -187,7 +187,7 @@ window.cancelRide = async function (rideId) {
             loadRidesData();
         }
     } catch (error) {
-        alert('❌ Error cancelling ride: ' + error.message);
+        alert('That ride could not be cancelled. Try again.');
     }
 };
 
@@ -293,7 +293,7 @@ async function updateProfile(formData) {
             loadProfileData();
         }
     } catch (error) {
-        alert('❌ Error updating profile: ' + error.message);
+        alert('Your details could not be saved. Try again.');
     }
 }
 

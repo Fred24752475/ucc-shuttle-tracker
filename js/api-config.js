@@ -10,8 +10,16 @@ const API_CONFIG = {
 
 // Initialize API URL
 API_CONFIG.API_URL = API_CONFIG.getBaseURL();
-
-console.log('🌐 API URL:', API_CONFIG.API_URL);
-
-// Make it globally available
 window.API_CONFIG = API_CONFIG;
+
+window.readableProblem = function (error) {
+    const raw = String((error && error.message) || '');
+    if (/failed to fetch|network|abort|timeout|offline/i.test(raw)) {
+        return 'We could not reach the shuttle service. Check your internet and try again.';
+    }
+    if (/sql|token|stack|ECONN|syntax|column|relation|HTTP \d|status code|undefined/i.test(raw)) {
+        return 'Something went wrong. Try again in a moment.';
+    }
+    if (raw && raw.length < 140) return raw;
+    return 'Something went wrong. Try again in a moment.';
+};

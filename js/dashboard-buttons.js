@@ -386,7 +386,7 @@ const FleetManager = {
             }
         } catch (error) {
             console.error('Add shuttle error:', error);
-            Utils.showError('❌ Failed to add shuttle: ' + error.message);
+            Utils.showError('The shuttle could not be added. Try again in a moment.');
         } finally {
             Utils.hideButtonLoading(submitBtn, originalText);
         }
@@ -566,7 +566,7 @@ const DriverManager = {
             }
         } catch (error) {
             console.error('Add driver error:', error);
-            Utils.showError('❌ Failed to add driver: ' + error.message);
+            Utils.showError('The driver could not be added. Try again in a moment.');
         } finally {
             Utils.hideButtonLoading(submitBtn, originalText);
         }
@@ -748,7 +748,7 @@ const SystemManager = {
             }
         } catch (error) {
             console.error('Broadcast error:', error);
-            Utils.showError('❌ Failed to send broadcast: ' + error.message);
+            Utils.showError('The broadcast could not be sent. Try again in a moment.');
         } finally {
             Utils.hideButtonLoading(submitBtn, originalText);
         }
@@ -785,7 +785,7 @@ const SystemManager = {
             }
         } catch (error) {
             console.error('Backup error:', error);
-            Utils.showError('❌ Database backup failed: ' + error.message);
+            Utils.showError('The backup could not be started. Try again in a moment.');
         } finally {
             if (button) Utils.hideButtonLoading(button, originalText);
         }
@@ -824,7 +824,7 @@ const SystemManager = {
             Utils.showSuccess(`🗑️ Cache cleared successfully! (${keysToRemove.length} items removed)`);
         } catch (error) {
             console.error('Clear cache error:', error);
-            Utils.showError('❌ Failed to clear cache: ' + error.message);
+            Utils.showError('The cache could not be cleared. Try again in a moment.');
         } finally {
             if (button) {
                 setTimeout(() => {
@@ -903,7 +903,7 @@ const SystemManager = {
             }
         } catch (error) {
             console.error('Emergency shutdown error:', error);
-            Utils.showError('❌ Emergency shutdown failed: ' + error.message);
+            Utils.showError('The shutdown could not be completed. Try again in a moment.');
         } finally {
             if (button) Utils.hideButtonLoading(button, originalText);
         }
@@ -1019,7 +1019,7 @@ const RouteManager = {
             }
         } catch (error) {
             console.error('Add route error:', error);
-            Utils.showError('❌ Failed to add route: ' + error.message);
+            Utils.showError('The route could not be added. Try again in a moment.');
         } finally {
             Utils.hideButtonLoading(submitBtn, originalText);
         }
@@ -1047,7 +1047,7 @@ const RouteManager = {
                 }
             } catch (error) {
                 console.error('Delete route error:', error);
-                Utils.showError('❌ Failed to delete route: ' + error.message);
+                Utils.showError('The route could not be deleted. Try again in a moment.');
             }
         }
     }

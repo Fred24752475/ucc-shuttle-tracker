@@ -270,7 +270,7 @@ class StudentDashboard {
             console.log(`✅ Loaded ${shuttles.length} shuttles on map`);
         } catch (error) {
             console.error('❌ Error loading shuttles on map:', error);
-            this.showMapError('Failed to load shuttles: ' + error.message);
+            this.showMapError('The shuttles could not be loaded. Refresh the page.');
         }
     }
         } catch (error) {
@@ -1241,7 +1241,7 @@ class StudentDashboard {
                 this.loadCurrentTrip();
             } else {
                 const error = await response.json();
-                this.showNotification(`❌ ${error.message || 'Request failed'}`, 'error');
+                this.showNotification('That ride could not be requested. Try again.', 'error');
             }
         } catch (error) {
             console.error('❌ Error submitting ride request:', error);

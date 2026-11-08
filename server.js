@@ -232,10 +232,10 @@ async function deliverCode(to, code, purpose) {
 // Auth middleware
 function authenticateToken(req, res, next) {
     const token = req.headers['authorization']?.split(' ')[1];
-    if (!token) return res.status(401).json({ success: false, message: 'Access token required' });
+    if (!token) return res.status(401).json({ success: false, message: 'Please sign in again.' });
     
     jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ success: false, message: 'Invalid token' });
+        if (err) return res.status(403).json({ success: false, message: 'Please sign in again.' });
         req.user = user;
         next();
     });
@@ -244,7 +244,7 @@ function authenticateToken(req, res, next) {
 function requireRole(roles) {
     return (req, res, next) => {
         if (!roles.includes(req.user.role)) {
-            return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+            return res.status(403).json({ success: false, message: 'You do not have access to that. Sign in with the right account.' });
         }
         next();
     };
@@ -254,9 +254,9 @@ function requireRole(roles) {
 app.get('/api/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
-        res.json({ success: true, status: 'healthy', database: 'connected' });
+        res.json({ success: true, status: 'ready' });
     } catch (error) {
-        res.status(500).json({ success: false, status: 'unhealthy', database: 'disconnected' });
+        res.status(500).json({ success: false, message: 'The service is unavailable. Try again in a moment.' });
     }
 });
 
@@ -268,10 +268,10 @@ app.post('/api/auth/login', async (req, res) => {
         const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
         
-        if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        if (!user) return res.status(401).json({ success: false, message: 'That email or password is not right. Try again, or reset your password.' });
         
         const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        if (!isValid) return res.status(401).json({ success: false, message: 'That email or password is not right. Try again, or reset your password.' });
         
         await client.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
         
@@ -283,7 +283,7 @@ app.post('/api/auth/login', async (req, res) => {
             user: publicAccount(user)
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -296,10 +296,10 @@ app.post('/api/login', async (req, res) => {
         const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
         
-        if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        if (!user) return res.status(401).json({ success: false, message: 'That email or password is not right. Try again, or reset your password.' });
         
         const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        if (!isValid) return res.status(401).json({ success: false, message: 'That email or password is not right. Try again, or reset your password.' });
         
         await client.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
         
@@ -311,7 +311,7 @@ app.post('/api/login', async (req, res) => {
             user: publicAccount(user)
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -523,7 +523,7 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
         const account = publicAccount(result.rows[0]);
         res.json({ success: true, user: { ...result.rows[0], ...account }, profile: account });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -593,7 +593,7 @@ app.get('/api/driver/profile', authenticateToken, async (req, res) => {
         };
         res.json({ success: true, profile, user: profile });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -633,7 +633,7 @@ app.put('/api/driver/profile', authenticateToken, requireRole(['driver']), async
         );
         res.json({ success: true, message: 'Profile updated', profile: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -650,7 +650,7 @@ app.get('/api/student/profile', authenticateToken, async (req, res) => {
         const profile = { ...result.rows[0], ...publicAccount(result.rows[0]) };
         res.json({ success: true, profile, user: profile });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -674,7 +674,7 @@ app.put('/api/student/profile', authenticateToken, async (req, res) => {
         );
         res.json({ success: true, message: 'Profile updated', profile: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -702,7 +702,7 @@ app.get('/api/student/pickup-location', authenticateToken, async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -746,7 +746,7 @@ app.get('/api/trips', authenticateToken, async (req, res) => {
         const result = await client.query(query, params);
         res.json({ success: true, trips: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -764,7 +764,7 @@ app.post('/api/trips', authenticateToken, async (req, res) => {
         
         res.json({ success: true, trip: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -935,10 +935,8 @@ app.post('/api/friends/request', authenticateToken, async (req, res) => {
         
         res.json({ success: true, message: 'Friend request sent' });
     } catch (error) {
-        console.error('❌ Error sending friend request:', error);
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
-        res.status(500).json({ success: false, message: 'Error sending request', error: error.message });
+        console.error('Friend request failed');
+        res.status(500).json({ success: false, message: 'The request could not be sent. Try again.' });
     } finally {
         client.release();
     }
@@ -1607,7 +1605,7 @@ app.get('/api/admin/overview', authenticateToken, requireRole(['admin']), async 
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1652,7 +1650,7 @@ app.get('/api/shuttles', authenticateToken, async (req, res) => {
         `);
         res.json({ success: true, shuttles: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1676,7 +1674,7 @@ app.get('/api/rides', authenticateToken, async (req, res) => {
         const result = await client.query(sql, [req.user.id]);
         res.json({ success: true, rides: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1722,7 +1720,7 @@ app.delete('/api/rides/:id', authenticateToken, async (req, res) => {
         if (!result.rows[0]) return res.status(404).json({ success: false, message: 'Ride not found' });
         res.json({ success: true, ride: result.rows[0] });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1750,7 +1748,7 @@ app.get('/api/trips/history', authenticateToken, async (req, res) => {
         const result = await client.query(sql, params);
         res.json({ success: true, trips: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1811,7 +1809,7 @@ app.get('/api/driver/shuttle', authenticateToken, requireRole(['driver']), async
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1829,7 +1827,7 @@ app.get('/api/driver/trips/history', authenticateToken, requireRole(['driver']),
         `, [req.user.id]);
         res.json({ success: true, trips: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -1967,7 +1965,7 @@ app.post('/api/driver/change-password', authenticateToken, requireRole(['driver'
         await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.user.id]);
         res.json({ success: true, message: 'Password changed' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2002,7 +2000,7 @@ app.get('/api/admin/stats', authenticateToken, requireRole(['admin']), async (re
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2016,7 +2014,7 @@ app.get('/api/admin/all-users', authenticateToken, requireRole(['admin']), async
         );
         res.json({ success: true, users: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2114,7 +2112,7 @@ app.get('/api/admin/drivers', authenticateToken, requireRole(['admin']), async (
         `);
         res.json({ success: true, drivers: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2150,7 +2148,7 @@ app.get('/api/admin/driver-locations', authenticateToken, requireRole(['admin'])
         });
         res.json({ success: true, drivers });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2170,7 +2168,7 @@ app.get('/api/admin/trips', authenticateToken, requireRole(['admin']), async (re
         `);
         res.json({ success: true, trips: result.rows });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2198,7 +2196,7 @@ app.get('/api/admin/report/:type', authenticateToken, requireRole(['admin']), as
         }
         res.type('text/plain').send(lines.join('\n'));
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2212,7 +2210,7 @@ app.get('/api/admin/settings', authenticateToken, requireRole(['admin']), async 
         result.rows.forEach((row) => { settings[row.key] = row.value; });
         res.json({ success: true, settings });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
         client.release();
     }
@@ -2235,6 +2233,12 @@ app.post('/api/admin/settings', authenticateToken, requireRole(['admin']), async
     } finally {
         client.release();
     }
+});
+
+app.use((err, req, res, next) => {
+    console.error('Request failed');
+    if (res.headersSent) return next(err);
+    res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
 });
 
 const PORT = process.env.PORT || 8080;

@@ -243,7 +243,7 @@ try {
             }, 100);
         } else {
             // Show error with animation
-            showLoginError(result.message || 'Login failed');
+            showLoginError('That email or password is not right. Try again, or reset your password.');
             
             // Shake animation for error effect
             const loginContainer = document.getElementById('loginContainer');
@@ -255,11 +255,11 @@ try {
             }
         }
         } else {
-            showError(result.message || 'Login failed');
+            showError('That email or password is not right. Try again, or reset your password.');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showError('Login failed: ' + error.message);
+        showError('We could not sign you in. Check your internet and try again.');
     }
 }
 
@@ -428,8 +428,7 @@ function initializeMap() {
                 <div style="text-align: center; color: #6c757d;">
                     <div style="font-size: 48px; margin-bottom: 10px;">🗺️</div>
                     <div style="font-weight: 600;">Map Loading Error</div>
-                    <div style="font-size: 14px;">Please check your internet connection</div>
-                    <div style="font-size: 12px; margin-top: 10px; color: #dc3545;">Error: ${error.message}</div>
+                    <div style="font-size: 14px;">Check your internet connection, then refresh the page.</div>
                 </div>
             </div>
         `;
@@ -1355,8 +1354,7 @@ async function loadStudentDirectory() {
             tableBody.innerHTML = `
                 <tr class="error-row">
                     <td colspan="8" style="text-align: center; padding: 20px; color: #f44336;">
-                        <div>❌ Failed to load student directory</div>
-                        <div style="font-size: 12px; margin-top: 5px;">${error.message}</div>
+                        <div>The student list could not be loaded. Try again.</div>
                         <button onclick="loadStudentDirectory()" style="margin-top: 10px; padding: 8px 16px; background: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>
                     </td>
                 </tr>
@@ -1846,7 +1844,7 @@ async function loadSystemStatus() {
         if (error.name === 'AbortError') {
             showSystemStatusError('Request timeout - server may be busy');
         } else {
-            showSystemStatusError(error.message);
+            showSystemStatusError('Status could not be loaded. Try again in a moment.');
         }
         
         // Load fallback system status
@@ -2229,7 +2227,7 @@ async function loadDriverDashboard() {
         if (error.name === 'AbortError') {
             showDriverDashboardError('Request timeout - please check your connection');
         } else {
-            showDriverDashboardError(error.message);
+            showDriverDashboardError('The driver dashboard could not be loaded. Refresh the page.');
         }
     }
 }

@@ -59,66 +59,42 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
-
-            // Show attempting login
-            errorMsg.textContent = 'Connecting to server...';
-            errorMsg.style.background = '#ffc';
-            errorMsg.style.color = '#333';
-            errorMsg.style.display = 'block';
+            const button = e.target.querySelector('button');
+            button.disabled = true;
+            button.textContent = 'Signing in...';
+            errorMsg.style.display = 'none';
 
             try {
-                console.log('Attempting login to:', `${API_CONFIG.API_URL}/api/login`);
-                
-                // Add timeout to fetch
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-                
                 const response = await fetch(`${API_CONFIG.API_URL}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password }),
-                    signal: controller.signal
+                    body: JSON.stringify({ email, password })
                 });
-                
-                clearTimeout(timeoutId);
-                console.log('Response status:', response.status);
-                
                 const data = await response.json();
-                console.log('Login response:', data);
 
-                if (data.success) {
-                    // Check if user is a student
-                    if (data.user.role !== 'student') {
-                        errorMsg.textContent = 'Access denied. This login is for students only.';
-                        errorMsg.style.background = '#fee';
-                        errorMsg.style.color = '#c33';
-                        return;
-                    }
-                    
-                    errorMsg.textContent = 'Login successful! Redirecting...';
-                    errorMsg.style.background = '#efe';
-                    errorMsg.style.color = '#060';
-                    
+                if (data.success && data.user.role === 'student') {
                     localStorage.setItem('ucc_token', data.token);
                     localStorage.setItem('ucc_user', JSON.stringify(data.user));
-                    
-                    setTimeout(() => {
-                        window.location.href = 'student-dashboard.html';
-                    }, 500);
-                } else {
-                    errorMsg.textContent = data.message || 'Login failed';
-                    errorMsg.style.background = '#fee';
-                    errorMsg.style.color = '#c33';
+                    errorMsg.className = 'notice';
+                    errorMsg.textContent = 'You are signed in.';
+                    errorMsg.style.display = 'block';
+                    setTimeout(() => { window.location.href = 'student-dashboard.html'; }, 700);
+                    return;
                 }
+
+                errorMsg.className = 'error';
+                errorMsg.textContent = data.success
+                    ? 'This page is for students. Use the driver or admin sign in.'
+                    : 'That email or password is not right. Try again, or reset your password.';
+                errorMsg.style.display = 'block';
+                button.disabled = false;
+                button.textContent = 'Login';
             } catch (error) {
-                console.error('Login error:', error);
-                if (error.name === 'AbortError') {
-                    errorMsg.textContent = 'Connection timeout. Server took too long to respond.';
-                } else {
-                    errorMsg.textContent = 'Error: ' + error.message;
-                }
-                errorMsg.style.background = '#fee';
-                errorMsg.style.color = '#c33';
+                errorMsg.className = 'error';
+                errorMsg.textContent = 'We could not reach the shuttle service. Check your internet and try again.';
+                errorMsg.style.display = 'block';
+                button.disabled = false;
+                button.textContent = 'Login';
             }
         });
     </script>

@@ -12,7 +12,7 @@ const pool = new Pool({
 // Test connection
 pool.connect((err, client, release) => {
     if (err) {
-        console.error('Error connecting to PostgreSQL:', err.stack);
+        console.error('The database could not be reached');
     } else {
         console.log('Connected to PostgreSQL database');
         release();

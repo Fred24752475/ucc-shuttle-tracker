@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await uploadAccountPhoto(photo.files[0]);
             } catch (error) {
-                alert(error.message);
+                alert(window.readableProblem ? window.readableProblem(error) : 'That could not be saved. Try again.');
             }
         });
     }
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 passwordForm.reset();
                 alert('Password changed');
             } catch (error) {
-                alert(error.message);
+                alert(window.readableProblem ? window.readableProblem(error) : 'That could not be saved. Try again.');
             }
         });
     }

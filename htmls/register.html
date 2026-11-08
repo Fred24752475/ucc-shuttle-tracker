@@ -106,7 +106,8 @@
                 errorMsg.style.display = 'none';
                 boxes.focus();
             } catch (error) {
-                showError(error.message);
+                const text = String(error && error.message || '');
+                showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
             }
             button.disabled = false;
         });
