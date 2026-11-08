@@ -387,18 +387,12 @@ class DarkModeManager {
 
     updateToggleButton() {
         const themeBtn = document.getElementById('themeBtn');
-        const icon = themeBtn.querySelector('i');
-        const text = themeBtn.querySelector('.theme-text');
-        
-        if (this.isDarkMode) {
-            icon.className = 'fas fa-sun';
-            text.textContent = 'Light';
-            themeBtn.title = 'Switch to Light Mode';
-        } else {
-            icon.className = 'fas fa-moon';
-            text.textContent = 'Dark';
-            themeBtn.title = 'Switch to Dark Mode';
-        }
+        if (!themeBtn) return;
+        themeBtn.innerHTML = this.isDarkMode
+            ? '<i data-lucide="sun"></i><span class="theme-text">Light</span>'
+            : '<i data-lucide="moon"></i><span class="theme-text">Dark</span>';
+        themeBtn.title = this.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        if (window.lucide) lucide.createIcons();
     }
 }
 

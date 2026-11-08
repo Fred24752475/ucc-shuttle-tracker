@@ -35,6 +35,8 @@ const io = socketIo(server, {
             value TEXT NOT NULL
         )`);
         console.log('Database connected');
+        startDemoFleet();
+        console.log('Campus buses running:', demoFleet.size);
     } catch (error) {
         console.error('Database initialization failed:', error.message);
         process.exit(1);
@@ -704,32 +706,81 @@ app.get('/api/messages/:friendId', authenticateToken, async (req, res) => {
 const activeDrivers = new Map(); // driverId -> { latitude, longitude, timestamp, shuttleId }
 const rideTimers = new Map();
 
-// A closed loop around UCC so the shuttle drives a full scenic trip.
+// University of Cape Coast grounds. Every bus coordinate stays inside this box.
+const UCC_BOX = { south: 5.104, north: 5.134, west: -1.302, east: -1.272 };
 const CAMPUS_LOOP = [
-    [5.1038, -1.1962],
-    [5.1044, -1.1947],
-    [5.1051, -1.1930],
-    [5.1060, -1.1914],
-    [5.1069, -1.1896],
-    [5.1074, -1.1878],
-    [5.1065, -1.1868],
-    [5.1053, -1.1882],
-    [5.1044, -1.1904],
-    [5.1036, -1.1926],
-    [5.1034, -1.1946],
-    [5.1038, -1.1962]
+    [5.1085, -1.2980],
+    [5.1120, -1.2945],
+    [5.1155, -1.2909],
+    [5.1183, -1.2886],
+    [5.1210, -1.2860],
+    [5.1205, -1.2805],
+    [5.1160, -1.2795],
+    [5.1136, -1.2788],
+    [5.1110, -1.2830],
+    [5.1090, -1.2900],
+    [5.1085, -1.2980]
 ];
 const CAMPUS_LOOP_MS = 150000;
+const DEMO_FLEET = [
+    {
+        id: 'demo-west',
+        vehicle: 'UCC-BRT 01',
+        driver: 'Kofi Mensah',
+        routeName: 'West Gate – Administration',
+        loopMs: 140000,
+        route: CAMPUS_LOOP
+    },
+    {
+        id: 'demo-east',
+        vehicle: 'UCC-BRT 02',
+        driver: 'Ama Boateng',
+        routeName: 'East Gate – Halls',
+        loopMs: 170000,
+        route: [
+            [5.1065, -1.2920],
+            [5.1080, -1.2860],
+            [5.1105, -1.2820],
+            [5.1130, -1.2795],
+            [5.1110, -1.2765],
+            [5.1075, -1.2780],
+            [5.1055, -1.2840],
+            [5.1060, -1.2900],
+            [5.1065, -1.2920]
+        ]
+    },
+    {
+        id: 'demo-science',
+        vehicle: 'UCC-BRT 03',
+        driver: 'Yaw Owusu',
+        routeName: 'Science – Hospital',
+        loopMs: 125000,
+        route: [
+            [5.1070, -1.2845],
+            [5.1095, -1.2810],
+            [5.1125, -1.2865],
+            [5.1160, -1.2895],
+            [5.1190, -1.2930],
+            [5.1165, -1.2965],
+            [5.1120, -1.2950],
+            [5.1085, -1.2900],
+            [5.1070, -1.2845]
+        ]
+    }
+];
+const demoFleet = new Map();
 
-function campusPoint(startedAt, now) {
-    const t = ((now - startedAt) % CAMPUS_LOOP_MS) / CAMPUS_LOOP_MS;
-    const span = CAMPUS_LOOP.length - 1;
+function campusPoint(startedAt, now, route = CAMPUS_LOOP, loopMs = CAMPUS_LOOP_MS) {
+    const t = ((now - startedAt) % loopMs) / loopMs;
+    const span = route.length - 1;
     const pos = t * span;
     const i = Math.floor(pos);
     const f = pos - i;
-    const a = CAMPUS_LOOP[i];
-    const b = CAMPUS_LOOP[Math.min(i + 1, span)];
-    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+    const a = route[i];
+    const b = route[Math.min(i + 1, span)];
+    const lat = Math.min(UCC_BOX.north, Math.max(UCC_BOX.south, a[0] + (b[0] - a[0]) * f));
+    const lng = Math.min(UCC_BOX.east, Math.max(UCC_BOX.west, a[1] + (b[1] - a[1]) * f));
+    return [lat, lng];
 }
 
 function stopCampusDrive(driverId) {
@@ -745,7 +796,7 @@ function stopCampusDrive(driverId) {
 function beginCampusDrive(driverId, shuttle, driverName) {
     if (rideTimers.has(driverId)) stopCampusDrive(driverId);
     const startedAt = Date.now();
-    const [lat, lng] = campusPoint(startedAt, startedAt);
+    const [lat, lng] = campusPoint(startedAt, startedAt, CAMPUS_LOOP, CAMPUS_LOOP_MS);
     const state = {
         shuttleId: shuttle.id,
         vehicleNumber: shuttle.vehicle_number,
@@ -791,7 +842,7 @@ function beginCampusDrive(driverId, shuttle, driverName) {
         const current = activeDrivers.get(driverId);
         if (!current) return stopCampusDrive(driverId);
         const now = Date.now();
-        const [latitude, longitude] = campusPoint(current.startedAt, now);
+        const [latitude, longitude] = campusPoint(current.startedAt, now, current.route, current.loopMs);
         activeDrivers.set(driverId, { ...current, latitude, longitude, timestamp: now });
         publish(latitude, longitude, now);
         ticks += 1;
@@ -804,6 +855,48 @@ function beginCampusDrive(driverId, shuttle, driverName) {
     }, 1000);
     rideTimers.set(driverId, timer);
     return state;
+}
+
+function startDemoFleet() {
+    DEMO_FLEET.forEach((bus, index) => {
+        if (demoFleet.has(bus.id)) return;
+        const startedAt = Date.now() - index * 45000;
+        const [lat, lng] = campusPoint(startedAt, Date.now(), bus.route, bus.loopMs);
+        const state = {
+            shuttleId: bus.id,
+            vehicleNumber: bus.vehicle,
+            driverName: bus.driver,
+            routeName: bus.routeName,
+            route: bus.route,
+            loopMs: bus.loopMs,
+            startedAt,
+            latitude: lat,
+            longitude: lng,
+            timestamp: Date.now()
+        };
+        demoFleet.set(bus.id, state);
+        const timer = setInterval(() => {
+            const now = Date.now();
+            const current = demoFleet.get(bus.id);
+            if (!current) return;
+            const [latitude, longitude] = campusPoint(current.startedAt, now, current.route, current.loopMs);
+            const next = { ...current, latitude, longitude, timestamp: now };
+            demoFleet.set(bus.id, next);
+            io.emit('shuttle_location_update', {
+                shuttleId: bus.id,
+                vehicleNumber: bus.vehicle,
+                driverName: bus.driver,
+                latitude,
+                longitude,
+                routeName: bus.routeName,
+                startedAt: current.startedAt,
+                loopMs: bus.loopMs,
+                route: bus.route,
+                timestamp: now
+            });
+        }, 1000);
+        rideTimers.set(bus.id, timer);
+    });
 }
 
 // Driver starts a ride (begins broadcasting location)
@@ -979,12 +1072,31 @@ app.get('/api/shuttles/active', authenticateToken, async (req, res) => {
                 vehicle_number: driverData?.vehicleNumber || shuttle.vehicle_number,
                 lastUpdate: driverData?.timestamp || null
             };
-        });
+        }).filter((shuttle) => (
+            Number(shuttle.latitude) > UCC_BOX.south &&
+            Number(shuttle.latitude) < UCC_BOX.north &&
+            Number(shuttle.longitude) > UCC_BOX.west &&
+            Number(shuttle.longitude) < UCC_BOX.east
+        ));
         
+        const demos = [...demoFleet.values()].map((bus) => ({
+            id: bus.shuttleId,
+            vehicle_number: bus.vehicleNumber,
+            driver_name: bus.driverName,
+            latitude: bus.latitude,
+            longitude: bus.longitude,
+            status: 'active',
+            routeName: bus.routeName,
+            route: bus.route,
+            startedAt: bus.startedAt,
+            loopMs: bus.loopMs
+        }));
+        const visible = demos.concat(shuttles);
         res.json({
             success: true,
-            shuttles: shuttles,
-            count: shuttles.length
+            shuttles: visible,
+            campus: UCC_BOX,
+            count: visible.length
         });
     } catch (error) {
         console.error('Get active shuttles error:', error);

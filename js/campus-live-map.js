@@ -36,7 +36,9 @@
         const style = document.createElement('style');
         style.id = 'campus-car-style';
         style.textContent = `
-            .campus-car { font-size: 26px; line-height: 36px; text-align: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); transition: transform .2s linear; }
+            .campus-car { font-size: 22px; line-height: 36px; text-align: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+            .you-dot { width: 16px; height: 16px; margin: 6px auto 0; border-radius: 50%; background: #0a66c2; border: 3px solid white; box-shadow: 0 0 0 8px rgba(10,102,194,.25); }
+            .you-label { display: none; }
             .leaflet-container { background: #dbe7df; font-family: inherit; }
         `;
         document.head.appendChild(style);
@@ -49,13 +51,15 @@
         const lng = where ? where.lng : Number(shuttle.longitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-        if (route && route.length > 1 && !map._campusRoute) {
-            map._campusRoute = L.polyline(route.map((p) => [Number(p[0]), Number(p[1])]), {
-                color: '#1565c0',
-                weight: 5,
-                opacity: 0.85
-            }).addTo(map);
-            map.fitBounds(map._campusRoute.getBounds(), { padding: [28, 28] });
+        if (route && route.length > 1) {
+            map._drawnRoutes = map._drawnRoutes || {};
+            if (!map._drawnRoutes[shuttle.id]) {
+                map._drawnRoutes[shuttle.id] = L.polyline(route.map((p) => [Number(p[0]), Number(p[1])]), {
+                    color: '#0a66c2',
+                    weight: 4,
+                    opacity: 0.55
+                }).addTo(map);
+            }
         }
 
         const key = map._campusId + ':' + shuttle.id;
@@ -145,7 +149,7 @@
         el.style.setProperty('width', '100%', 'important');
         el.style.setProperty('min-height', '420px', 'important');
         if (!maps[containerId]) {
-            const map = L.map(el, { zoomControl: true }).setView([5.1052, -1.1918], 15);
+            const map = L.map(el, { zoomControl: true }).setView([5.116, -1.289], 15);
             const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                 maxZoom: 19
@@ -156,22 +160,54 @@
             tiles.addTo(map);
             map._campusId = containerId;
             maps[containerId] = map;
+            const campus = L.latLngBounds([5.104, -1.302], [5.134, -1.272]);
+            L.rectangle(campus, {
+                color: '#0a66c2',
+                weight: 1.5,
+                dashArray: '7 6',
+                fillColor: '#0a66c2',
+                fillOpacity: 0.04
+            }).addTo(map);
+            map.fitBounds(campus, { padding: [16, 16] });
             const stops = [
-                [5.1044, -1.1947, 'Main Gate'],
-                [5.1060, -1.1914, 'Science Block'],
-                [5.1074, -1.1878, 'Hostel Area'],
-                [5.1044, -1.1904, 'Admin Block']
+                [5.1085, -1.2980, 'West Gate'],
+                [5.1155, -1.2909, 'Administration'],
+                [5.1183, -1.2886, 'Science'],
+                [5.1136, -1.2788, 'East Gate']
             ];
             stops.forEach(([lat, lng, name]) => {
-                L.circleMarker([lat, lng], { radius: 6, color: '#0d47a1', fillColor: '#42a5f5', fillOpacity: 0.9 })
+                L.circleMarker([lat, lng], { radius: 5, color: '#083e75', fillColor: '#7cc4ff', fillOpacity: 0.95 })
                     .addTo(map)
                     .bindPopup(name);
             });
+            pinSignedInUser(map);
         }
         setTimeout(() => maps[containerId].invalidateSize(), 200);
         bindSocket();
         refresh();
         return maps[containerId];
+    }
+
+    function pinSignedInUser(map) {
+        const icon = L.divIcon({
+            className: 'you-pin',
+            html: '<div class="you-dot"></div><div class="you-label">You</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+        const drop = (lat, lng, label) => {
+            if (map._youMarker) map._youMarker.remove();
+            map._youMarker = L.marker([lat, lng], { icon, zIndexOffset: 900 }).addTo(map).bindPopup(label);
+        };
+        const onCampus = () => drop(5.1155, -1.2909, 'You are here on UCC campus');
+        if (!navigator.geolocation) return onCampus();
+        navigator.geolocation.getCurrentPosition((position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const inside = lat > 5.104 && lat < 5.134 && lng > -1.302 && lng < -1.272;
+            if (inside) drop(lat, lng, 'You are here');
+            else onCampus();
+        }, onCampus, { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 });
     }
 
     window.CampusLiveMap = { attach, refresh };
