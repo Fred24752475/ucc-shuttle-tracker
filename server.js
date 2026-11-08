@@ -7,6 +7,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const helmet = require('helmet');
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -211,6 +213,10 @@ function requireAppPassword(req, res) {
 const EMAIL_USER = process.env.EMAIL_USER || 'fredrickokyere60@gmail.com';
 const EMAIL_PASS = (process.env.EMAIL_PASS || process.env.APP_PASSWORD || '').replace(/\s+/g, '');
 
+function ipv4Lookup(hostname, options, callback) {
+    dns.lookup(hostname, { family: 4 }, callback);
+}
+
 function mailTransport(port) {
     return nodemailer.createTransport({
         host: 'smtp.gmail.com',
@@ -219,7 +225,8 @@ function mailTransport(port) {
         auth: { user: EMAIL_USER, pass: EMAIL_PASS },
         connectionTimeout: 12000,
         greetingTimeout: 12000,
-        socketTimeout: 20000
+        socketTimeout: 20000,
+        lookup: ipv4Lookup
     });
 }
 
