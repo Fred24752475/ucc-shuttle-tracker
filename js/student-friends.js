@@ -166,22 +166,37 @@ class StudentFriendsSystem {
         }).join('');
     }
 
+    when(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const today = new Date();
+        if (date.toDateString() === today.toDateString()) {
+            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+
     personRow(person, label, disabled, add) {
+        const open = this.esc(JSON.stringify({ id: person.id, name: person.name, profileImage: person.profileImage, role: person.role }));
+        const preview = person.lastMessage || (person.role === 'driver' ? 'Driver' : 'Student');
         const action = add
-            ? `<button class="btn-add-friend" data-add="${person.id}">Add</button>`
-            : `<button class="btn-add-friend" data-open="${this.esc(JSON.stringify({ id: person.id, name: person.name, profileImage: person.profileImage, role: person.role }))}" ${disabled ? 'disabled' : ''}>${this.esc(label)}</button>`;
+            ? `<button class="btn-add-friend" type="button" data-add="${person.id}">Add</button>`
+            : '';
         return `
-            <div class="student-card" data-name="${this.esc(person.name)}">
-                <div class="student-avatar">
-                    <img src="${this.esc(person.profileImage)}" alt="">
-                    <span class="online-status ${person.online ? 'online' : 'offline'}"></span>
+            <div class="student-card wa-row" data-name="${this.esc(person.name)}" ${add || disabled ? '' : `data-open="${open}"`}>
+                <img src="${this.esc(person.profileImage)}" alt="">
+                <div class="wa-row-body">
+                    <div class="wa-row-top">
+                        <strong>${this.esc(person.name)}</strong>
+                        <time class="${person.unread ? 'unread' : ''}">${this.esc(this.when(person.lastAt))}</time>
+                    </div>
+                    <div class="wa-row-bottom">
+                        <span>${this.esc(preview)}</span>
+                        ${person.unread ? `<em class="wa-badge">${person.unread}</em>` : ''}
+                        ${disabled ? `<em class="wa-wait">${this.esc(label)}</em>` : ''}
+                    </div>
                 </div>
-                <div class="student-info">
-                    <h4>${this.esc(person.name)}</h4>
-                    <p>${this.esc(person.role === 'driver' ? 'Driver' : (person.studentId || 'Student'))}</p>
-                    ${person.lastMessage ? `<small>${this.esc(person.lastMessage)}</small>` : ''}
-                </div>
-                ${person.unread ? `<span class="notification-badge">${person.unread}</span>` : ''}
                 ${action}
             </div>`;
     }
@@ -238,11 +253,11 @@ class StudentFriendsSystem {
         if (box) box.style.display = '';
         document.getElementById('chatHeader').innerHTML = `
             <div class="chat-header-content">
-                <button type="button" class="chat-back" id="chatBackBtn">Back</button>
+                <button type="button" class="chat-back" id="chatBackBtn" aria-label="Back">‹</button>
                 <img src="${this.esc(person.profileImage)}" alt="">
                 <div>
                     <h3>${this.esc(person.name)}</h3>
-                    <p>${this.esc(person.role === 'driver' ? 'Driver' : 'Student')}</p>
+                    <p>${person.online ? 'online' : this.esc(person.role === 'driver' ? 'Driver' : 'Student')}</p>
                 </div>
             </div>`;
         document.getElementById('chatBackBtn').addEventListener('click', () => this.closeChat());
@@ -286,13 +301,13 @@ class StudentFriendsSystem {
 
     bubble(message, mine) {
         const own = Number(message.sender_id) === Number(mine);
-        return `
-            <div class="message ${own ? 'message-sent' : 'message-received'}" data-id="${message.id}">
-                <div class="message-content">
-                    <p>${this.esc(message.content)}</p>
-                    <small>${new Date(message.created_at).toLocaleTimeString()}</small>
-                </div>
-            </div>`;
+            return `
+                <div class="message ${own ? 'message-sent' : 'message-received'}" data-id="${message.id}">
+                    <div class="message-content">
+                        <p>${this.esc(message.content)}</p>
+                        <small>${this.esc(this.when(message.created_at))}</small>
+                    </div>
+                </div>`;
     }
 
     onIncoming(message) {

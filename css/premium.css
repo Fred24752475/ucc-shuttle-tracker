@@ -606,6 +606,55 @@ input:focus, select:focus, textarea:focus {
 
 .phone-menu, .phone-logout { display: none; }
 
+#aiAssistantSection { background: #efeae2; padding: 0 !important; }
+#aiAssistantSection .section-header,
+#aiAssistantSection .ai-header,
+#aiAssistantSection .ai-quick-actions { display: none !important; }
+#aiAssistantSection .ai-chat-container { display: flex; flex-direction: column; min-height: calc(100vh - 20px); background: #efeae2; }
+#aiAssistantSection .ai-chat-header-mobile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #008069;
+    color: #fff;
+    padding: 10px 14px;
+}
+#aiAssistantSection .ai-chat-title { font-size: 17px; font-weight: 650; }
+#aiAssistantSection .ai-chat-header-mobile p { margin: 0; font-size: 13px; opacity: .85; }
+#aiAssistantSection .ai-back-btn { background: transparent; border: 0; color: #fff; font-size: 28px; cursor: pointer; }
+#aiAssistantSection .ai-messages { flex: 1; background: #efeae2; padding: 16px; overflow: auto; }
+#aiAssistantSection .message { display: flex; margin-bottom: 8px; }
+#aiAssistantSection .message-sent { justify-content: flex-end; }
+#aiAssistantSection .message-content {
+    max-width: 75%;
+    padding: 8px 10px 4px;
+    border-radius: 8px;
+    box-shadow: 0 1px 0.5px rgba(11, 20, 26, .13);
+    color: #111b21;
+}
+#aiAssistantSection .message-sent .message-content { background: #d9fdd3; }
+#aiAssistantSection .message-received .message-content { background: #fff; }
+#aiAssistantSection .ai-input-container { background: #f0f2f5; padding: 8px 10px; position: static; }
+#aiAssistantSection .ai-input-wrapper { display: flex; gap: 8px; align-items: center; background: transparent; }
+#aiAssistantSection #aiInput {
+    flex: 1;
+    border: 0;
+    border-radius: 24px;
+    background: #fff;
+    color: #111;
+    padding: 12px 16px;
+    font-size: 16px;
+}
+#aiAssistantSection #aiSendBtn {
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: #00a884;
+    color: #fff;
+    cursor: pointer;
+}
+
 .phone-logout {
     border: 1px solid #f3c3bd;
     background: white;
