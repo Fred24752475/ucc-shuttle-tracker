@@ -515,9 +515,11 @@ input:focus, select:focus, textarea:focus {
 .notice { background: #eef8f1; color: #0d6b2e; padding: 10px 12px; border-radius: 10px; margin-bottom: 16px; display: none; font-size: 14px; }
 .otp-row { display: flex; gap: 8px; }
 .otp-row input {
-    width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: 700;
+    width: 46px; height: 54px; flex: 1; min-width: 0; max-width: 52px; text-align: center; font-size: 22px; font-weight: 700;
     border: 1px solid var(--line); border-radius: 12px; background: white;
 }
+.step-note { margin: 0 0 14px; color: #344054; font-size: 14px; line-height: 1.45; }
+.step-link { display: inline-block; margin-top: 10px; border: 0; background: transparent; color: #128a3a; font-weight: 700; cursor: pointer; padding: 0; }
 .otp-row input:focus { outline: none; border-color: #128a3a; box-shadow: 0 0 0 3px rgba(18, 138, 58, 0.15); }
 .role-choice { display: flex; gap: 8px; margin-bottom: 16px; }
 .role-choice button {

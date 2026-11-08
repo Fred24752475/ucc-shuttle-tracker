@@ -48,23 +48,28 @@
                     <label>Code from your email</label>
                     <div id="codeBoxes"></div>
                 </div>
-                <div class="form-group">
-                    <label for="name">Full name</label>
-                    <input type="text" id="name" required placeholder="Your name" autocomplete="name">
+                <button class="step-link" id="resendBtn" type="button">Send the code again</button>
+                <div id="detailsStep" class="hidden-step">
+                    <p class="step-note">Now set your password and finish the account.</p>
+                    <div class="form-group">
+                        <label for="name">Full name</label>
+                        <input type="text" id="name" required placeholder="Your name" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="tel" id="phone" placeholder="+233 XX XXX XXXX" autocomplete="tel">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm password</label>
+                        <input type="password" id="confirmPassword" required minlength="6" autocomplete="new-password">
+                    </div>
+                    <button class="btn-login" type="submit">Create account</button>
                 </div>
-                <div class="form-group">
-                    <label for="phone">Phone</label>
-                    <input type="tel" id="phone" placeholder="+233 XX XXX XXXX" autocomplete="tel">
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <label for="confirmPassword">Confirm password</label>
-                    <input type="password" id="confirmPassword" required minlength="6" autocomplete="new-password">
-                </div>
-                <button class="btn-login" type="submit">Create account</button>
+                <button class="step-link" id="changeEmailBtn" type="button">Use a different email</button>
             </form>
             <div class="links">
                 <a href="student-login.html">Already have an account?</a>
@@ -72,8 +77,12 @@
         </div>
     </section>
     <script>
-        const boxes = createCodeBoxes(document.getElementById('codeBoxes'));
         const errorMsg = document.getElementById('errorMsg');
+        const boxes = createCodeBoxes(document.getElementById('codeBoxes'), {
+            onChange: () => {
+                if (boxes.code().length === 6) document.getElementById('detailsStep').classList.remove('hidden-step');
+            }
+        });
         let role = new URLSearchParams(location.search).get('role') === 'driver' ? 'driver' : 'student';
         document.querySelectorAll('.role-choice button').forEach((button) => {
             button.classList.toggle('active', button.getAttribute('data-role') === role);
@@ -87,29 +96,57 @@
             errorMsg.textContent = text;
             errorMsg.style.display = 'block';
         }
+        function openCodeStep(email) {
+            document.getElementById('emailForm').classList.add('hidden-step');
+            document.getElementById('accountForm').classList.remove('hidden-step');
+            document.getElementById('sentNote').textContent = 'Enter the 6-digit code sent to ' + email + '. Check inbox and spam.';
+            errorMsg.style.display = 'none';
+            boxes.focus();
+        }
+        async function sendCode() {
+            const email = document.getElementById('email').value.trim();
+            const response = await fetch('/api/auth/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, purpose: 'signup' })
+            });
+            const data = await response.json();
+            if (!data.success) throw new Error(data.message || 'Could not send the code');
+            document.getElementById('sentNote').textContent = 'Enter the 6-digit code sent to ' + email + '. Check inbox and spam.';
+        }
         document.getElementById('emailForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const button = document.getElementById('sendBtn');
+            const email = document.getElementById('email').value.trim();
+            if (!email) return showError('Enter the email address you want the code sent to');
             button.disabled = true;
+            button.textContent = 'Sending code...';
+            openCodeStep(email);
             try {
-                const email = document.getElementById('email').value.trim();
-                const response = await fetch('/api/auth/send-code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, purpose: 'signup' })
-                });
-                const data = await response.json();
-                if (!data.success) throw new Error(data.message || 'Could not send the code');
-                document.getElementById('emailForm').classList.add('hidden-step');
-                document.getElementById('accountForm').classList.remove('hidden-step');
-                document.getElementById('sentNote').textContent = 'Enter the code sent to ' + email + '. Check inbox and spam.';
-                errorMsg.style.display = 'none';
-                boxes.focus();
+                await sendCode();
             } catch (error) {
                 const text = String(error && error.message || '');
                 showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
             }
             button.disabled = false;
+            button.textContent = 'Send code';
+        });
+        document.getElementById('resendBtn').addEventListener('click', async () => {
+            try {
+                await sendCode();
+                const ok = document.getElementById('okMsg');
+                ok.textContent = 'A new code is on the way. Check inbox and spam.';
+                ok.style.display = 'block';
+                errorMsg.style.display = 'none';
+            } catch (error) {
+                const text = String(error && error.message || '');
+                showError(/fetch|network|abort/i.test(text) || !text ? 'We could not reach the shuttle service. Check your internet and try again.' : text);
+            }
+        });
+        document.getElementById('changeEmailBtn').addEventListener('click', () => {
+            document.getElementById('accountForm').classList.add('hidden-step');
+            document.getElementById('emailForm').classList.remove('hidden-step');
+            document.getElementById('email').focus();
         });
         document.getElementById('accountForm').addEventListener('submit', async (event) => {
             event.preventDefault();
