@@ -254,7 +254,7 @@ class StudentFriendsSystem {
         document.getElementById('chatHeader').innerHTML = `
             <div class="chat-header-content">
                 <button type="button" class="chat-back" id="chatBackBtn" aria-label="Back">‹</button>
-                <img src="${this.esc(person.profileImage)}" alt="">
+                <img src="${this.esc(person.profileImage)}" alt="" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(person.name || 'U')}&background=dfe5e7&color=111b21&size=80'">
                 <div>
                     <h3>${this.esc(person.name)}</h3>
                     <p>${person.online ? 'online' : this.esc(person.role === 'driver' ? 'Driver' : 'Student')}</p>

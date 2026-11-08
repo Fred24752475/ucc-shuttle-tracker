@@ -763,15 +763,7 @@ input:focus, select:focus, textarea:focus {
 
     body.admin-app .sidebar.open { transform: none !important; }
 
-    [data-section="ai-assistant"],
-    #aiAssistantSection,
-    #aiAssistantSection #aiInputContainer,
-    #aiInputContainer,
-    .ai-chat-header-mobile,
-    .ai-input-container {
-        display: none !important;
-        position: static !important;
-    }
+    .nav-item[data-section="ai-assistant"] { display: none !important; }
 
     .phone-logout {
         display: inline-flex !important;
@@ -831,6 +823,131 @@ input:focus, select:focus, textarea:focus {
         padding: 16px !important;
         overflow: visible !important;
     }
+
+    main.messages-section,
+    main#aiAssistantSection {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        z-index: 55 !important;
+        overflow: hidden !important;
+        background: #efeae2 !important;
+    }
+
+    .messages-section .messages-content,
+    .messages-section .chat-layout,
+    .messages-section .chat-directory,
+    .messages-section .chat-container,
+    #aiAssistantSection .ai-content,
+    #aiAssistantSection .ai-chat-container {
+        height: 100% !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    .messages-section .chat-container,
+    #aiAssistantSection .ai-chat-container {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .messages-section .chat-layout:not(.chat-open) .chat-container { display: none !important; }
+    .messages-section .chat-layout.chat-open .chat-directory { display: none !important; }
+    .messages-section .chat-layout.chat-open .chat-container { display: flex !important; }
+
+    main.messages-section #chatHeader {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #008069 !important;
+    }
+
+    main.messages-section .chat-header,
+    main.messages-section .chat-header-content,
+    main#aiAssistantSection .ai-chat-header-mobile {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        box-sizing: border-box !important;
+        background: #008069 !important;
+    }
+
+    .messages-section .chat-messages,
+    #aiAssistantSection .ai-messages {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        overflow-y: auto !important;
+        background: #efeae2 !important;
+        padding: 10px 12px !important;
+    }
+
+    .messages-section .chat-input,
+    #aiAssistantSection .ai-input-container {
+        flex: 0 0 auto !important;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        background: #f0f2f5 !important;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) !important;
+    }
+
+    .messages-section .message,
+    #aiAssistantSection .message {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 6px !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .messages-section .message-sent,
+    #aiAssistantSection .message-sent { justify-content: flex-end !important; }
+    .messages-section .message-received,
+    #aiAssistantSection .message-received { justify-content: flex-start !important; }
+
+    .messages-section .message p,
+    #aiAssistantSection .message p {
+        display: inline !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        color: #111b21 !important;
+        border-radius: 0 !important;
+    }
+
+    .messages-section .message-content,
+    #aiAssistantSection .message-content {
+        width: auto !important;
+        max-width: 78% !important;
+        padding: 6px 8px 4px !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+    }
+
+    .messages-section .message-sent .message-content,
+    #aiAssistantSection .message-sent .message-content { background: #d9fdd3 !important; }
+    .messages-section .message-received .message-content,
+    #aiAssistantSection .message-received .message-content { background: #fff !important; }
 
     .action-cards, .action-grid, .widgets-grid, .shuttles-grid, .drivers-grid {
         display: grid !important;
