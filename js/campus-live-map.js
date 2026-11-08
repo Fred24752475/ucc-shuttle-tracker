@@ -24,24 +24,16 @@
 
     function carIcon(bearing) {
         return L.divIcon({
-            className: 'campus-car-icon',
-            html: `<div class="campus-bus" style="transform: rotate(${bearing}deg)">
-                <svg viewBox="0 0 32 56" aria-hidden="true">
-                    <rect x="4" y="3" width="24" height="50" rx="7" fill="#128a3a"/>
-                    <rect x="6.5" y="6" width="19" height="9" rx="2.5" fill="#102033"/>
-                    <rect x="7" y="18" width="18" height="18" rx="1.5" fill="#0d3a22" opacity="0.35"/>
-                    <rect x="4" y="24" width="24" height="3.2" fill="#f5c518"/>
-                    <rect x="4" y="27.2" width="24" height="2" fill="#d23b2e"/>
-                    <circle cx="10" cy="8.5" r="1.3" fill="#fff"/>
-                    <circle cx="22" cy="8.5" r="1.3" fill="#fff"/>
-                    <rect x="1" y="14" width="3" height="7" rx="1" fill="#1a1a1a"/>
-                    <rect x="28" y="14" width="3" height="7" rx="1" fill="#1a1a1a"/>
-                    <rect x="1" y="36" width="3" height="7" rx="1" fill="#1a1a1a"/>
-                    <rect x="28" y="36" width="3" height="7" rx="1" fill="#1a1a1a"/>
-                </svg>
+            className: 'leaflet-div-icon campus-car-icon',
+            html: `<div style="width:34px;height:58px;transform:rotate(${bearing}deg);transform-origin:center center;">
+                <div style="width:34px;height:58px;background:#128a3a;border-radius:10px;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.45);overflow:hidden;">
+                    <div style="height:12px;margin:4px 4px 0;background:#102033;border-radius:3px;"></div>
+                    <div style="height:5px;margin-top:8px;background:#f5c518;"></div>
+                    <div style="height:4px;background:#d23b2e;"></div>
+                </div>
             </div>`,
-            iconSize: [32, 56],
-            iconAnchor: [16, 28]
+            iconSize: [34, 58],
+            iconAnchor: [17, 29]
         });
     }
 
@@ -50,8 +42,7 @@
         const style = document.createElement('style');
         style.id = 'campus-car-style';
         style.textContent = `
-            .campus-bus { width: 32px; height: 56px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.45)); }
-            .campus-bus svg { width: 32px; height: 56px; display: block; }
+            .leaflet-div-icon.campus-car-icon { background: transparent !important; border: none !important; }
             .you-dot { width: 16px; height: 16px; margin: 6px auto 0; border-radius: 50%; background: #0a66c2; border: 3px solid white; box-shadow: 0 0 0 8px rgba(10,102,194,.25); }
             .you-label { display: none; }
             .leaflet-container { background: #dbe7df; font-family: inherit; }
@@ -70,9 +61,9 @@
             map._drawnRoutes = map._drawnRoutes || {};
             if (!map._drawnRoutes[shuttle.id]) {
                 map._drawnRoutes[shuttle.id] = L.polyline(route.map((p) => [Number(p[0]), Number(p[1])]), {
-                    color: '#0a66c2',
-                    weight: 4,
-                    opacity: 0.55
+                    color: '#128a3a',
+                    weight: 3,
+                    opacity: 0.35
                 }).addTo(map);
             }
         }
@@ -177,17 +168,6 @@
             maps[containerId] = map;
             const campus = L.latLngBounds([5.104, -1.302], [5.134, -1.272]);
             map.fitBounds(campus, { padding: [16, 16] });
-            const stops = [
-                [5.1085, -1.2980, 'West Gate'],
-                [5.1155, -1.2909, 'Administration'],
-                [5.1183, -1.2886, 'Science'],
-                [5.1136, -1.2788, 'East Gate']
-            ];
-            stops.forEach(([lat, lng, name]) => {
-                L.circleMarker([lat, lng], { radius: 5, color: '#083e75', fillColor: '#7cc4ff', fillOpacity: 0.95 })
-                    .addTo(map)
-                    .bindPopup(name);
-            });
             pinSignedInUser(map);
         }
         setTimeout(() => maps[containerId].invalidateSize(), 200);

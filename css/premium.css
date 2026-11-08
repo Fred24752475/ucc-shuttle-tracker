@@ -263,12 +263,14 @@ body {
     box-shadow: var(--shadow);
 }
 
-.map-container, #liveMap, #driverMap, #studentShuttleMap, #campusMap {
-    border-radius: 16px !important;
-    border: 1px solid var(--line);
-    overflow: hidden;
-    box-shadow: var(--shadow);
+.map-widget .widget-content { padding: 0 !important; background: transparent !important; }
+.map-container, #liveMap, #driverMap, #studentShuttleMap, #campusMap, .leaflet-container {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
+.map-content, .map-section { background: transparent !important; }
 
 .bottom-nav {
     background: rgba(255, 255, 255, 0.92) !important;
