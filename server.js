@@ -38,6 +38,30 @@ const io = socketIo(server, {
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_latitude DECIMAL(10, 8)');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pickup_longitude DECIMAL(11, 8)');
         await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image TEXT');
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS student_id TEXT');
+        await pool.query(`CREATE TABLE IF NOT EXISTS conversations (
+            id SERIAL PRIMARY KEY,
+            participant1_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            participant2_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(participant1_id, participant2_id)
+        )`);
+        const messageColumns = await pool.query(`
+            SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'messages'
+        `);
+        const messageColumnNames = messageColumns.rows.map((row) => row.column_name);
+        if (messageColumnNames.length && !messageColumnNames.includes('conversation_id')) {
+            await pool.query('ALTER TABLE messages RENAME TO messages_legacy');
+        }
+        await pool.query(`CREATE TABLE IF NOT EXISTS messages (
+            id SERIAL PRIMARY KEY,
+            conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+            sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            content TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
         await pool.query(`CREATE TABLE IF NOT EXISTS friendships (
             id SERIAL PRIMARY KEY,
             requester_id INTEGER NOT NULL REFERENCES users(id),
@@ -111,6 +135,40 @@ function publicAccount(user) {
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ucc_shuttle_tracker_enhanced_2024';
+const onlineUsers = new Map();
+
+function emitTo(userId, event, payload) {
+    io.to(`user:${userId}`).emit(event, payload);
+}
+
+io.use((socket, next) => {
+    try {
+        const token = socket.handshake.auth && socket.handshake.auth.token;
+        const payload = jwt.verify(token, JWT_SECRET);
+        socket.userId = payload.id;
+        socket.userRole = payload.role;
+        next();
+    } catch (error) {
+        next(new Error('unauthorized'));
+    }
+});
+
+io.on('connection', (socket) => {
+    const userId = Number(socket.userId);
+    socket.join(`user:${userId}`);
+    if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
+    onlineUsers.get(userId).add(socket.id);
+    io.emit('chat:presence', { userId, online: true });
+    socket.on('disconnect', () => {
+        const sockets = onlineUsers.get(userId);
+        if (!sockets) return;
+        sockets.delete(socket.id);
+        if (!sockets.size) {
+            onlineUsers.delete(userId);
+            io.emit('chat:presence', { userId, online: false });
+        }
+    });
+});
 
 function requireAppPassword(req, res) {
     const expected = (process.env.APP_PASSWORD || '').replace(/\s+/g, '').toLowerCase();
@@ -617,20 +675,120 @@ app.post('/api/trips', authenticateToken, async (req, res) => {
     }
 });
 
-// ============= FRIEND REQUEST SYSTEM =============
+// ============= CHAT =============
+
+function chatPerson(row) {
+    const account = publicAccount(row);
+    return {
+        id: Number(row.person_id || row.friend_id || row.id),
+        name: account.name,
+        email: account.email,
+        role: account.role,
+        studentId: row.student_id || '',
+        profileImage: account.profileImage,
+        online: onlineUsers.has(Number(row.person_id || row.friend_id || row.id))
+    };
+}
+
+async function usersByRole(client, role, exceptId) {
+    const result = await client.query(`
+        SELECT id, name, email, role, student_id, profile_image
+        FROM users
+        WHERE role = $1 AND id != $2
+        ORDER BY name ASC
+    `, [role, exceptId]);
+    return result.rows.map(chatPerson);
+}
+
+function canDirectMessage(senderRole, receiverRole, friends) {
+    const allowed = new Set(['student', 'driver']);
+    if (!allowed.has(senderRole) || !allowed.has(receiverRole)) return false;
+    if (senderRole === 'student' && receiverRole === 'student') return friends;
+    return senderRole !== receiverRole;
+}
+
+app.get('/api/chat/directory', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'student' && req.user.role !== 'driver') {
+        return res.status(403).json({ success: false, message: 'Chat is for students and drivers' });
+    }
+    const client = await pool.connect();
+    try {
+        const students = await usersByRole(client, 'student', req.user.id);
+        const drivers = await usersByRole(client, 'driver', req.user.id);
+        const links = await client.query(`
+            SELECT id, requester_id, receiver_id, status, created_at
+            FROM friendships
+            WHERE requester_id = $1 OR receiver_id = $1
+        `, [req.user.id]);
+        const byOther = new Map();
+        links.rows.forEach((row) => {
+            const otherId = Number(row.requester_id) === Number(req.user.id) ? Number(row.receiver_id) : Number(row.requester_id);
+            byOther.set(otherId, row);
+        });
+        students.forEach((student) => {
+            const link = byOther.get(student.id);
+            student.friendship = link ? link.status : 'none';
+            student.requestId = link ? link.id : null;
+            student.incoming = Boolean(link && Number(link.receiver_id) === Number(req.user.id) && link.status === 'pending');
+        });
+        const requests = req.user.role === 'student'
+            ? (await client.query(`
+                SELECT f.id, f.created_at, u.id AS person_id, u.name, u.email, u.role, u.student_id, u.profile_image
+                FROM friendships f
+                JOIN users u ON u.id = f.requester_id
+                WHERE f.receiver_id = $1 AND f.status = 'pending' AND u.role = 'student'
+                ORDER BY f.created_at DESC
+            `, [req.user.id])).rows.map((row) => ({ ...chatPerson(row), requestId: row.id, createdAt: row.created_at }))
+            : [];
+        const conversations = (await client.query(`
+            SELECT
+                CASE WHEN c.participant1_id = $1 THEN c.participant2_id ELSE c.participant1_id END AS person_id,
+                u.name, u.email, u.role, u.student_id, u.profile_image,
+                m.content AS last_message,
+                m.created_at AS last_at,
+                (
+                    SELECT COUNT(*)::int FROM messages unread
+                    WHERE unread.conversation_id = c.id AND unread.sender_id <> $1 AND unread.is_read = false
+                ) AS unread
+            FROM conversations c
+            JOIN users u ON u.id = CASE WHEN c.participant1_id = $1 THEN c.participant2_id ELSE c.participant1_id END
+            LEFT JOIN LATERAL (
+                SELECT content, created_at FROM messages
+                WHERE conversation_id = c.id
+                ORDER BY created_at DESC
+                LIMIT 1
+            ) m ON true
+            WHERE (c.participant1_id = $1 OR c.participant2_id = $1)
+              AND u.role IN ('student', 'driver')
+            ORDER BY m.created_at DESC NULLS LAST
+        `, [req.user.id])).rows.map((row) => ({
+            ...chatPerson(row),
+            lastMessage: row.last_message || '',
+            lastAt: row.last_at,
+            unread: row.unread
+        }));
+        res.json({
+            success: true,
+            students,
+            drivers,
+            requests,
+            friends: students.filter((student) => student.friendship === 'accepted'),
+            conversations
+        });
+    } catch (error) {
+        console.error('Error loading chat directory:', error);
+        res.status(500).json({ success: false, message: 'Could not load chat' });
+    } finally {
+        client.release();
+    }
+});
 
 // Get all students (for finding friends)
 app.get('/api/students/all', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        const result = await client.query(`
-            SELECT id, name, email, student_id, created_at 
-            FROM users 
-            WHERE role = 'student' AND id != $1
-            ORDER BY name ASC
-        `, [req.user.id]);
-        
-        res.json({ success: true, students: result.rows });
+        const students = await usersByRole(client, 'student', req.user.id);
+        res.json({ success: true, students });
     } catch (error) {
         console.error('Error fetching students:', error);
         res.status(500).json({ success: false, message: 'Error fetching students' });
@@ -643,35 +801,42 @@ app.get('/api/students/all', authenticateToken, async (req, res) => {
 app.post('/api/friends/request', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        const { receiver_id } = req.body;
+        const receiverId = Number(req.body.receiver_id);
+        if (req.user.role !== 'student') {
+            return res.status(403).json({ success: false, message: 'Only students send friend requests' });
+        }
+        const receiver = await client.query('SELECT id, role, name FROM users WHERE id = $1', [receiverId]);
+        if (!receiver.rows[0] || receiver.rows[0].role !== 'student' || receiverId === Number(req.user.id)) {
+            return res.status(400).json({ success: false, message: 'You can only add another student' });
+        }
         
-        console.log('📨 Friend request from:', req.user.id, 'to:', receiver_id);
-        
-        // Check if already friends or request exists
         const existing = await client.query(`
             SELECT * FROM friendships 
             WHERE (requester_id = $1 AND receiver_id = $2) 
             OR (requester_id = $2 AND receiver_id = $1)
-        `, [req.user.id, receiver_id]);
+        `, [req.user.id, receiverId]);
         
-        if (existing.rows.length > 0) {
-            console.log('⚠️ Friend request already exists');
+        if (existing.rows[0] && existing.rows[0].status === 'accepted') {
+            return res.status(400).json({ success: false, message: 'You are already friends' });
+        }
+        if (existing.rows[0] && existing.rows[0].status === 'pending') {
             return res.status(400).json({ success: false, message: 'Friend request already exists' });
         }
+        if (existing.rows[0]) {
+            await client.query(`
+                UPDATE friendships
+                SET requester_id = $1, receiver_id = $2, status = 'pending', updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+            `, [req.user.id, receiverId, existing.rows[0].id]);
+        } else {
+            await client.query(`
+                INSERT INTO friendships (requester_id, receiver_id, status) 
+                VALUES ($1, $2, 'pending')
+            `, [req.user.id, receiverId]);
+        }
         
-        console.log('✅ Inserting friend request into database...');
-        await client.query(`
-            INSERT INTO friendships (requester_id, receiver_id, status) 
-            VALUES ($1, $2, 'pending')
-        `, [req.user.id, receiver_id]);
-        
-        console.log('✅ Friend request inserted successfully');
-        
-        // Emit socket event
-        io.emit(`friend_request_${receiver_id}`, {
-            from: req.user.id,
-            message: 'New friend request'
-        });
+        const sender = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+        emitTo(receiverId, 'chat:request', { from: req.user.id, name: sender.rows[0].name });
         
         res.json({ success: true, message: 'Friend request sent' });
     } catch (error) {
@@ -710,11 +875,14 @@ app.get('/api/friends/requests', authenticateToken, async (req, res) => {
 app.post('/api/friends/accept/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        await client.query(`
+        const updated = await client.query(`
             UPDATE friendships 
             SET status = 'accepted', updated_at = CURRENT_TIMESTAMP 
-            WHERE id = $1 AND receiver_id = $2
+            WHERE id = $1 AND receiver_id = $2 AND status = 'pending'
+            RETURNING requester_id
         `, [req.params.id, req.user.id]);
+        if (!updated.rows[0]) return res.status(404).json({ success: false, message: 'Request not found' });
+        emitTo(updated.rows[0].requester_id, 'chat:accepted', { by: req.user.id });
         
         res.json({ success: true, message: 'Friend request accepted' });
     } catch (error) {
@@ -781,18 +949,21 @@ app.get('/api/friends', authenticateToken, async (req, res) => {
 app.post('/api/messages/send', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
-        const { receiver_id, content } = req.body;
-        
-        // Check if they are friends
+        const receiverId = Number(req.body.receiver_id);
+        const content = String(req.body.content || '').trim();
+        if (!content || content.length > 2000) {
+            return res.status(400).json({ success: false, message: 'Write a message under 2000 characters' });
+        }
+        const receiver = await client.query('SELECT id, role, name FROM users WHERE id = $1', [receiverId]);
+        if (!receiver.rows[0]) return res.status(404).json({ success: false, message: 'Person not found' });
         const friendship = await client.query(`
-            SELECT * FROM friendships 
+            SELECT status FROM friendships 
             WHERE ((requester_id = $1 AND receiver_id = $2) 
             OR (requester_id = $2 AND receiver_id = $1))
             AND status = 'accepted'
-        `, [req.user.id, receiver_id]);
-        
-        if (friendship.rows.length === 0) {
-            return res.status(403).json({ success: false, message: 'You can only message friends' });
+        `, [req.user.id, receiverId]);
+        if (!canDirectMessage(req.user.role, receiver.rows[0].role, friendship.rows.length > 0)) {
+            return res.status(403).json({ success: false, message: 'Students chat after a friend accepts. Drivers can be messaged directly. Admins are not in chat.' });
         }
         
         // Get or create conversation
@@ -800,33 +971,37 @@ app.post('/api/messages/send', authenticateToken, async (req, res) => {
             SELECT id FROM conversations 
             WHERE (participant1_id = $1 AND participant2_id = $2)
             OR (participant1_id = $2 AND participant2_id = $1)
-        `, [req.user.id, receiver_id]);
+        `, [req.user.id, receiverId]);
         
         let conversationId;
         if (conversation.rows.length === 0) {
             const newConv = await client.query(`
                 INSERT INTO conversations (participant1_id, participant2_id) 
                 VALUES ($1, $2) RETURNING id
-            `, [req.user.id, receiver_id]);
+            `, [Math.min(req.user.id, receiverId), Math.max(req.user.id, receiverId)]);
             conversationId = newConv.rows[0].id;
         } else {
             conversationId = conversation.rows[0].id;
         }
         
-        // Insert message
         const message = await client.query(`
             INSERT INTO messages (conversation_id, sender_id, content) 
             VALUES ($1, $2, $3) RETURNING *
         `, [conversationId, req.user.id, content]);
-        
-        // Emit socket event
-        io.emit(`new_message_${receiver_id}`, {
-            from: req.user.id,
+        const sender = await client.query('SELECT name, profile_image, email, role FROM users WHERE id = $1', [req.user.id]);
+        const payload = {
+            id: message.rows[0].id,
+            sender_id: req.user.id,
+            sender_name: sender.rows[0].name,
+            receiver_id: receiverId,
             content,
-            timestamp: message.rows[0].created_at
-        });
+            created_at: message.rows[0].created_at,
+            profileImage: publicAccount(sender.rows[0]).profileImage
+        };
+        emitTo(receiverId, 'chat:message', payload);
+        emitTo(req.user.id, 'chat:message', payload);
         
-        res.json({ success: true, message: message.rows[0] });
+        res.json({ success: true, message: { ...message.rows[0], sender_name: sender.rows[0].name } });
     } catch (error) {
         console.error('Error sending message:', error);
         res.status(500).json({ success: false, message: 'Error sending message' });
@@ -850,6 +1025,14 @@ app.get('/api/messages/:friendId', authenticateToken, async (req, res) => {
                 OR (participant1_id = $2 AND participant2_id = $1)
             )
             ORDER BY m.created_at ASC
+        `, [req.user.id, req.params.friendId]);
+        await client.query(`
+            UPDATE messages SET is_read = true
+            WHERE conversation_id IN (
+                SELECT id FROM conversations
+                WHERE (participant1_id = $1 AND participant2_id = $2)
+                   OR (participant1_id = $2 AND participant2_id = $1)
+            ) AND sender_id <> $1
         `, [req.user.id, req.params.friendId]);
         
         res.json({ success: true, messages: result.rows });

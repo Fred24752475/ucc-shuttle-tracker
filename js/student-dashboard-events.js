@@ -138,6 +138,7 @@ function initializeNavigationEvents() {
 
 // ============= MESSAGE EVENTS =============
 function initializeMessageEvents() {
+    if (document.getElementById('chatDirectory')) return;
     // Chat tabs
     const chatTabs = document.querySelectorAll('.chat-tabs .tab-btn');
     chatTabs.forEach(tab => {
@@ -499,6 +500,7 @@ function applyHistoryFilter() {
 
 // ============= MESSAGING =============
 function sendMessage() {
+    if (window.friendsSystem) return;
     const input = document.getElementById('messageInput');
     if (input && input.value.trim()) {
         const message = input.value.trim();

@@ -56,6 +56,12 @@
                         <span data-translate="completed-trips">Completed Trips</span>
                     </a>
                 </li>
+                <li class="nav-item" data-section="messages">
+                    <a href="#messages">
+                        <i data-lucide="message-circle"></i>
+                        <span>Messages</span>
+                    </a>
+                </li>
                 <li class="nav-item" data-section="notifications">
                     <a href="#notifications">
                         <i data-lucide="bell"></i>
@@ -426,6 +432,40 @@
         </main>
 
         <!-- Profile Section -->
+        <main class="messages-section profile-section" id="messagesSection" style="display: none;">
+            <div class="section-header">
+                <h2>Messages</h2>
+            </div>
+            <div class="messages-content">
+                <div class="chat-layout">
+                    <div class="chat-directory" id="chatDirectory">
+                        <div class="chat-tabs">
+                            <button class="chat-tab-btn active" data-tab="chats" type="button">Chats</button>
+                            <button class="chat-tab-btn" data-tab="drivers" type="button">Students</button>
+                        </div>
+                        <div class="search-bar">
+                            <input type="text" id="studentSearch" placeholder="Search students">
+                        </div>
+                        <div id="chatDirectoryList" class="students-list"></div>
+                    </div>
+                    <div class="chat-container" id="chatContainer">
+                        <div class="chat-header" id="chatHeader">
+                            <div class="no-chat-selected"><p>Select a student to reply</p></div>
+                        </div>
+                        <div class="chat-messages" id="chatMessages" style="display: none;"></div>
+                        <div class="chat-input" id="chatInput" style="display: none;">
+                            <div class="input-wrapper">
+                                <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+                            </div>
+                            <button class="send-btn" id="sendMessageBtn" type="button" title="Send Message">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
         <main class="profile-section" id="profileSection" style="display: none;">
             <div class="section-header">
                 <h2>👤 Profile</h2>
@@ -496,9 +536,9 @@
         <div class="nav-item-mobile center" data-section="view-map">
             <div class="nav-icon-mobile"><i data-lucide="map"></i></div>
         </div>
-        <div class="nav-item-mobile" data-section="completed-trips">
-            <div class="nav-icon-mobile"><i data-lucide="list-checks"></i></div>
-            <span class="nav-label-mobile">Trips</span>
+        <div class="nav-item-mobile" data-section="messages">
+            <div class="nav-icon-mobile"><i data-lucide="message-circle"></i></div>
+            <span class="nav-label-mobile">Chat</span>
         </div>
         <div class="nav-item-mobile" data-section="profile">
             <div class="nav-icon-mobile"><i data-lucide="user"></i></div>
@@ -531,6 +571,7 @@
             });
         });
     </script>
+    <link rel="stylesheet" href="../css/student-friends.css">
     <link rel="stylesheet" href="../css/premium.css">
     <script>document.addEventListener('DOMContentLoaded', () => window.lucide && lucide.createIcons());</script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
@@ -538,6 +579,7 @@
     <script src="../js/api-config.js"></script>
     <script src="../js/role-protection.js"></script>
     <script src="../js/profile.js"></script>
+    <script src="../js/student-friends.js"></script>
     <script src="../js/driver-dashboard-new.js"></script>
     <script src="../js/driver-location-tracker.js"></script>
     <script src="../js/mobile-navigation.js"></script>

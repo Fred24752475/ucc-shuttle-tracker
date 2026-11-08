@@ -1,495 +1,353 @@
-// Student Friends & Messaging System
 class StudentFriendsSystem {
     constructor() {
-        this.currentChatFriend = null;
-        this.friends = [];
-        this.friendRequests = [];
-        this.allStudents = [];
+        this.current = null;
+        this.directory = { students: [], drivers: [], requests: [], friends: [], conversations: [] };
         this.socket = null;
+        this.bound = false;
+        this.seen = new Set();
+        this.tab = 'chats';
+    }
+
+    me() {
+        try { return JSON.parse(localStorage.getItem('ucc_user') || '{}'); }
+        catch (error) { return {}; }
+    }
+
+    token() {
+        return localStorage.getItem('ucc_token');
+    }
+
+    esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
     }
 
     async init() {
-        console.log('🤝 Initializing Friends System...');
-        await this.loadFriends();
-        await this.loadFriendRequests();
-        await this.loadAllStudents();
-        this.setupSocketListeners();
-        this.setupEventListeners();
-    }
-
-    setupSocketListeners() {
-        if (typeof io !== 'undefined') {
-            this.socket = io(API_CONFIG.API_URL);
-            const userId = JSON.parse(localStorage.getItem('ucc_user')).id;
-            
-            // Listen for friend requests
-            this.socket.on(`friend_request_${userId}`, (data) => {
-                this.loadFriendRequests();
-                this.showNotification('New friend request!', 'info');
-            });
-            
-            // Listen for new messages
-            this.socket.on(`new_message_${userId}`, (data) => {
-                if (this.currentChatFriend && this.currentChatFriend.friend_id == data.from) {
-                    this.loadMessages(data.from);
-                }
-                this.showNotification('New message!', 'info');
-            });
+        if (!this.token()) return;
+        if (!this.bound) {
+            this.bindEvents();
+            this.connectSocket();
+            this.bound = true;
         }
+        this.applyRoleTabs();
+        await this.loadDirectory();
     }
 
-    setupEventListeners() {
-        // Tab buttons
-        document.querySelectorAll('.chat-tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = btn.getAttribute('data-tab');
-                this.showFriendsTab(tab);
-            });
+    applyRoleTabs() {
+        const driver = this.me().role === 'driver';
+        document.querySelectorAll('[data-tab="requests"], [data-tab="students"]').forEach((button) => {
+            button.style.display = driver ? 'none' : '';
         });
+        const people = document.querySelector('[data-tab="people"]');
+        if (people) people.textContent = driver ? 'Students' : 'Students';
+    }
 
-        // Search input
-        const searchInput = document.getElementById('studentSearch');
-        if (searchInput) {
-            searchInput.addEventListener('keyup', () => this.filterStudents());
-        }
-
-        // Send message button
-        const sendBtn = document.getElementById('sendMessageBtn');
-        if (sendBtn) {
-            sendBtn.addEventListener('click', () => this.sendMessage());
-        }
-
-        // Message input enter key
-        const messageInput = document.getElementById('messageInput');
-        if (messageInput) {
-            messageInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
+    bindEvents() {
+        document.querySelectorAll('.chat-tab-btn').forEach((button) => {
+            button.addEventListener('click', () => this.showTab(button.getAttribute('data-tab')));
+        });
+        const search = document.getElementById('studentSearch');
+        if (search) search.addEventListener('input', () => this.filterPeople());
+        const send = document.getElementById('sendMessageBtn');
+        if (send) send.addEventListener('click', () => this.sendMessage());
+        const input = document.getElementById('messageInput');
+        if (input) {
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
                     this.sendMessage();
                 }
             });
         }
+        const back = document.getElementById('chatBackBtn');
+        if (back) back.addEventListener('click', () => this.closeChat());
     }
 
-    showFriendsTab(tab) {
-        // Hide all tabs
-        document.getElementById('friendsTabContent').style.display = 'none';
-        document.getElementById('requestsTabContent').style.display = 'none';
-        document.getElementById('findTabContent').style.display = 'none';
-        document.getElementById('chatContainer').style.display = 'none';
-        
-        // Remove active class
-        document.querySelectorAll('.chat-tab-btn').forEach(btn => btn.classList.remove('active'));
-        
-        // Show selected tab
-        if (tab === 'friends') {
-            document.getElementById('friendsTabContent').style.display = 'block';
-            document.querySelector('[data-tab="friends"]').classList.add('active');
-            this.loadFriends();
-        } else if (tab === 'requests') {
-            document.getElementById('requestsTabContent').style.display = 'block';
-            document.querySelector('[data-tab="requests"]').classList.add('active');
-            this.loadFriendRequests();
-        } else if (tab === 'find') {
-            document.getElementById('findTabContent').style.display = 'block';
-            document.querySelector('[data-tab="find"]').classList.add('active');
-            this.loadAllStudents();
+    connectSocket() {
+        if (typeof io === 'undefined' || this.socket) return;
+        this.socket = io({ auth: { token: this.token() } });
+        this.socket.on('chat:message', (message) => this.onIncoming(message));
+        this.socket.on('chat:request', () => {
+            this.loadDirectory();
+            this.showNotification('New friend request');
+        });
+        this.socket.on('chat:accepted', () => {
+            this.loadDirectory();
+            this.showNotification('Your friend request was accepted');
+        });
+        this.socket.on('chat:presence', () => this.loadDirectory());
+    }
+
+    async loadDirectory() {
+        const response = await fetch('/api/chat/directory', {
+            headers: { Authorization: `Bearer ${this.token()}` }
+        });
+        const data = await response.json();
+        if (!data.success) {
+            this.showNotification(data.message || 'Could not load chat', 'error');
+            return;
+        }
+        this.directory = data;
+        this.render();
+        const unread = (data.conversations || []).reduce((sum, chat) => sum + (chat.unread || 0), 0);
+        const badge = document.getElementById('messageBadge');
+        if (badge) {
+            badge.textContent = unread;
+            badge.style.display = unread ? 'inline-block' : 'none';
         }
     }
 
-    filterStudents() {
-        const search = document.getElementById('studentSearch').value.toLowerCase();
-        const cards = document.querySelectorAll('.student-card');
-        cards.forEach(card => {
-            const name = card.querySelector('h4').textContent.toLowerCase();
+    showTab(tab) {
+        this.tab = tab;
+        this.closeChat();
+        document.querySelectorAll('.chat-tab-btn').forEach((button) => {
+            button.classList.toggle('active', button.getAttribute('data-tab') === tab);
+        });
+        this.render();
+    }
+
+    render() {
+        const pane = document.getElementById('chatDirectoryList');
+        if (!pane) return;
+        const role = this.me().role;
+        let html = '';
+        if (this.tab === 'chats') {
+            const rows = this.directory.conversations || [];
+            html = rows.length ? rows.map((person) => this.personRow(person, 'Open')).join('') : '<div class="no-friends">No chats yet.</div>';
+        } else if (this.tab === 'requests') {
+            const rows = this.directory.requests || [];
+            html = rows.length ? rows.map((person) => this.requestRow(person)).join('') : '<div class="no-requests">No pending requests</div>';
+        } else if (this.tab === 'students') {
+            html = this.studentRows();
+        } else if (this.tab === 'drivers') {
+            const rows = role === 'driver' ? (this.directory.students || []) : (this.directory.drivers || []);
+            html = rows.length ? rows.map((person) => this.personRow(person, 'Message')).join('') : '<div class="no-students">Nobody to message yet.</div>';
+        } else if (this.tab === 'people') {
+            html = role === 'driver'
+                ? ((this.directory.students || []).map((person) => this.personRow(person, 'Message')).join('') || '<div class="no-students">No students yet.</div>')
+                : this.studentRows();
+        }
+        pane.innerHTML = html;
+        pane.querySelectorAll('[data-open]').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.openChat(JSON.parse(button.getAttribute('data-open')));
+            });
+        });
+        pane.querySelectorAll('[data-add]').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.sendFriendRequest(button.getAttribute('data-add'));
+            });
+        });
+        pane.querySelectorAll('[data-accept]').forEach((button) => {
+            button.addEventListener('click', () => this.answerRequest(button.getAttribute('data-accept'), 'accept'));
+        });
+        pane.querySelectorAll('[data-reject]').forEach((button) => {
+            button.addEventListener('click', () => this.answerRequest(button.getAttribute('data-reject'), 'reject'));
+        });
+        const requestBadge = document.getElementById('friendRequestBadge');
+        if (requestBadge) {
+            const count = (this.directory.requests || []).length;
+            requestBadge.textContent = count;
+            requestBadge.style.display = count ? 'inline-block' : 'none';
+        }
+    }
+
+    studentRows() {
+        const rows = this.directory.students || [];
+        if (!rows.length) return '<div class="no-students">No other students yet.</div>';
+        return rows.map((person) => {
+            if (person.friendship === 'accepted') return this.personRow(person, 'Message');
+            if (person.incoming) return this.requestRow(person);
+            if (person.friendship === 'pending') return this.personRow(person, 'Requested', true);
+            return this.personRow(person, 'Add', false, true);
+        }).join('');
+    }
+
+    personRow(person, label, disabled, add) {
+        const action = add
+            ? `<button class="btn-add-friend" data-add="${person.id}">Add</button>`
+            : `<button class="btn-add-friend" data-open="${this.esc(JSON.stringify({ id: person.id, name: person.name, profileImage: person.profileImage, role: person.role }))}" ${disabled ? 'disabled' : ''}>${this.esc(label)}</button>`;
+        return `
+            <div class="student-card" data-name="${this.esc(person.name)}">
+                <div class="student-avatar">
+                    <img src="${this.esc(person.profileImage)}" alt="">
+                    <span class="online-status ${person.online ? 'online' : 'offline'}"></span>
+                </div>
+                <div class="student-info">
+                    <h4>${this.esc(person.name)}</h4>
+                    <p>${this.esc(person.role === 'driver' ? 'Driver' : (person.studentId || 'Student'))}</p>
+                    ${person.lastMessage ? `<small>${this.esc(person.lastMessage)}</small>` : ''}
+                </div>
+                ${person.unread ? `<span class="notification-badge">${person.unread}</span>` : ''}
+                ${action}
+            </div>`;
+    }
+
+    requestRow(person) {
+        return `
+            <div class="friend-request-card">
+                <div class="request-avatar"><img src="${this.esc(person.profileImage)}" alt=""></div>
+                <div class="request-info">
+                    <h4>${this.esc(person.name)}</h4>
+                    <p>Wants to chat</p>
+                </div>
+                <div class="request-actions">
+                    <button class="btn-accept" data-accept="${person.requestId}">Accept</button>
+                    <button class="btn-reject" data-reject="${person.requestId}">Reject</button>
+                </div>
+            </div>`;
+    }
+
+    filterPeople() {
+        const search = (document.getElementById('studentSearch').value || '').toLowerCase();
+        document.querySelectorAll('#chatDirectoryList .student-card, #chatDirectoryList .friend-request-card').forEach((card) => {
+            const name = (card.getAttribute('data-name') || card.textContent || '').toLowerCase();
             card.style.display = name.includes(search) ? 'flex' : 'none';
         });
     }
 
-    async loadAllStudents() {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            console.log('📚 Loading all students...');
-            
-            if (!token) {
-                console.error('❌ No token found');
-                this.showNotification('Please login first', 'error');
-                return;
-            }
-            
-            const response = await fetch(`${API_CONFIG.API_URL}/api/students/all`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            console.log('📡 Students API response status:', response.status);
-            
-            const data = await response.json();
-            console.log('📦 Students data:', data);
-            
-            if (data.success) {
-                this.allStudents = data.students;
-                console.log(`✅ Loaded ${this.allStudents.length} students`);
-                this.displayStudentsList();
-            } else {
-                console.error('❌ Failed to load students:', data.message);
-                this.showNotification(data.message || 'Failed to load students', 'error');
-            }
-        } catch (error) {
-            console.error('❌ Error loading students:', error);
-            this.showNotification('Error loading students', 'error');
-        }
-    }
-
-    displayStudentsList() {
-        const container = document.getElementById('allStudentsList');
-        if (!container) return;
-
-        if (this.allStudents.length === 0) {
-            container.innerHTML = '<div class="no-students">No other students found</div>';
-            return;
-        }
-
-        container.innerHTML = this.allStudents.map(student => `
-            <div class="student-card">
-                <div class="student-avatar">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=1565c0&color=fff" alt="${student.name}">
-                </div>
-                <div class="student-info">
-                    <h4>${student.name}</h4>
-                    <p>${student.student_id || 'Student'}</p>
-                </div>
-                <button class="btn-add-friend" data-student-id="${student.id}">
-                    ➕ Add Friend
-                </button>
-            </div>
-        `).join('');
-
-        // Add event listeners to all add friend buttons
-        container.querySelectorAll('.btn-add-friend').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const studentId = parseInt(btn.getAttribute('data-student-id'));
-                this.sendFriendRequest(studentId);
-            });
-        });
-    }
-
     async sendFriendRequest(receiverId) {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/friends/request`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ receiver_id: receiverId })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('Friend request sent! ✅', 'success');
-                this.loadAllStudents();
-            } else {
-                this.showNotification(data.message, 'error');
-            }
-        } catch (error) {
-            console.error('Error sending friend request:', error);
-            this.showNotification('Error sending request', 'error');
-        }
-    }
-
-    async loadFriendRequests() {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/friends/requests`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.friendRequests = data.requests;
-                this.displayFriendRequests();
-                this.updateRequestBadge();
-            }
-        } catch (error) {
-            console.error('Error loading friend requests:', error);
-        }
-    }
-
-    displayFriendRequests() {
-        const container = document.getElementById('friendRequestsList');
-        if (!container) return;
-
-        if (this.friendRequests.length === 0) {
-            container.innerHTML = '<div class="no-requests">No pending requests</div>';
-            return;
-        }
-
-        container.innerHTML = this.friendRequests.map(request => `
-            <div class="friend-request-card">
-                <div class="request-avatar">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(request.name)}&background=4caf50&color=fff" alt="${request.name}">
-                </div>
-                <div class="request-info">
-                    <h4>${request.name}</h4>
-                    <p>${request.student_id || 'Student'}</p>
-                    <small>${new Date(request.created_at).toLocaleDateString()}</small>
-                </div>
-                <div class="request-actions">
-                    <button class="btn-accept" data-request-id="${request.id}">✓ Accept</button>
-                    <button class="btn-reject" data-request-id="${request.id}">✗ Reject</button>
-                </div>
-            </div>
-        `).join('');
-
-        // Add event listeners to accept buttons
-        container.querySelectorAll('.btn-accept').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const requestId = parseInt(btn.getAttribute('data-request-id'));
-                this.acceptRequest(requestId);
-            });
+        const response = await fetch('/api/friends/request', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${this.token()}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ receiver_id: Number(receiverId) })
         });
+        const data = await response.json();
+        this.showNotification(data.message || (data.success ? 'Request sent' : 'Could not send'), data.success ? 'success' : 'error');
+        if (data.success) this.loadDirectory();
+    }
 
-        // Add event listeners to reject buttons
-        container.querySelectorAll('.btn-reject').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const requestId = parseInt(btn.getAttribute('data-request-id'));
-                this.rejectRequest(requestId);
-            });
+    async answerRequest(requestId, action) {
+        const response = await fetch(`/api/friends/${action}/${requestId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${this.token()}` }
         });
+        const data = await response.json();
+        if (!data.success) this.showNotification(data.message || 'Could not update request', 'error');
+        this.loadDirectory();
     }
 
-    updateRequestBadge() {
-        const badge = document.getElementById('friendRequestBadge');
-        if (badge) {
-            if (this.friendRequests.length > 0) {
-                badge.textContent = this.friendRequests.length;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-    }
-
-    async acceptRequest(requestId) {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/friends/accept/${requestId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('Friend request accepted! 🎉', 'success');
-                this.loadFriendRequests();
-                this.loadFriends();
-            }
-        } catch (error) {
-            console.error('Error accepting request:', error);
-        }
-    }
-
-    async rejectRequest(requestId) {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/friends/reject/${requestId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('Request rejected', 'info');
-                this.loadFriendRequests();
-            }
-        } catch (error) {
-            console.error('Error rejecting request:', error);
-        }
-    }
-
-    async loadFriends() {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/friends`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.friends = data.friends;
-                this.displayFriendsList();
-            }
-        } catch (error) {
-            console.error('Error loading friends:', error);
-        }
-    }
-
-    displayFriendsList() {
-        const container = document.getElementById('friendsList');
-        if (!container) return;
-
-        if (this.friends.length === 0) {
-            container.innerHTML = '<div class="no-friends">No friends yet. Add some friends to start chatting!</div>';
-            return;
-        }
-
-        container.innerHTML = this.friends.map(friend => `
-            <div class="friend-card" data-friend-id="${friend.friend_id}" data-friend-name="${friend.name}">
-                <div class="friend-avatar">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(friend.name)}&background=667eea&color=fff" alt="${friend.name}">
-                    <span class="online-status ${friend.last_login ? 'online' : 'offline'}"></span>
-                </div>
-                <div class="friend-info">
-                    <h4>${friend.name}</h4>
-                    <p>${friend.student_id || 'Student'}</p>
-                    <small>Friends since ${new Date(friend.friends_since).toLocaleDateString()}</small>
-                </div>
-                <div class="chat-icon">💬</div>
-            </div>
-        `).join('');
-
-        // Add event listeners to friend cards
-        container.querySelectorAll('.friend-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const friendId = parseInt(card.getAttribute('data-friend-id'));
-                const friendName = card.getAttribute('data-friend-name');
-                this.openChat(friendId, friendName);
-            });
-        });
-    }
-
-    async openChat(friendId, friendName) {
-        this.currentChatFriend = { friend_id: friendId, name: friendName };
-        
-        // Show chat area
+    async openChat(person) {
+        this.current = person;
+        const layout = document.querySelector('.chat-layout');
+        if (layout) layout.classList.add('chat-open');
+        const box = document.getElementById('chatContainer');
+        if (box) box.style.display = '';
         document.getElementById('chatHeader').innerHTML = `
             <div class="chat-header-content">
-                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(friendName)}&background=667eea&color=fff" alt="${friendName}">
+                <button type="button" class="chat-back" id="chatBackBtn">Back</button>
+                <img src="${this.esc(person.profileImage)}" alt="">
                 <div>
-                    <h3>${friendName}</h3>
-                    <p class="online-status">Online</p>
+                    <h3>${this.esc(person.name)}</h3>
+                    <p>${this.esc(person.role === 'driver' ? 'Driver' : 'Student')}</p>
                 </div>
-            </div>
-        `;
-        
+            </div>`;
+        document.getElementById('chatBackBtn').addEventListener('click', () => this.closeChat());
         document.getElementById('chatMessages').style.display = 'block';
         document.getElementById('chatInput').style.display = 'flex';
-        
-        await this.loadMessages(friendId);
+        const response = await fetch(`/api/messages/${person.id}`, {
+            headers: { Authorization: `Bearer ${this.token()}` }
+        });
+        const data = await response.json();
+        this.seen = new Set();
+        this.paintMessages(data.messages || []);
+        this.loadDirectory();
     }
 
-    async loadMessages(friendId) {
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/messages/${friendId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.displayMessages(data.messages);
-            }
-        } catch (error) {
-            console.error('Error loading messages:', error);
-        }
+    closeChat() {
+        this.current = null;
+        const layout = document.querySelector('.chat-layout');
+        if (layout) layout.classList.remove('chat-open');
+        const box = document.getElementById('chatContainer');
+        if (box) box.style.display = '';
+        const messages = document.getElementById('chatMessages');
+        const input = document.getElementById('chatInput');
+        if (messages) messages.style.display = 'none';
+        if (input) input.style.display = 'none';
+        const header = document.getElementById('chatHeader');
+        if (header) header.innerHTML = '<div class="no-chat-selected"><p>Select someone to start chatting</p></div>';
     }
 
-    displayMessages(messages) {
+    paintMessages(messages) {
         const container = document.getElementById('chatMessages');
         if (!container) return;
-
-        const currentUserId = JSON.parse(localStorage.getItem('ucc_user')).id;
-
-        if (messages.length === 0) {
-            container.innerHTML = '<div class="no-messages">No messages yet. Start the conversation!</div>';
+        const mine = Number(this.me().id);
+        if (!messages.length) {
+            container.innerHTML = '<div class="no-messages">No messages yet. Say hello.</div>';
             return;
         }
-
-        container.innerHTML = messages.map(msg => {
-            const isMe = msg.sender_id == currentUserId;
-            return `
-                <div class="message ${isMe ? 'message-sent' : 'message-received'}">
-                    <div class="message-content">
-                        ${!isMe ? `<strong>${msg.sender_name}</strong>` : ''}
-                        <p>${msg.content}</p>
-                        <small>${new Date(msg.created_at).toLocaleTimeString()}</small>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        // Scroll to bottom
+        container.innerHTML = messages.map((message) => this.bubble(message, mine)).join('');
+        messages.forEach((message) => this.seen.add(message.id));
         container.scrollTop = container.scrollHeight;
     }
 
-    async sendMessage() {
-        if (!this.currentChatFriend) return;
-
-        const input = document.getElementById('messageInput');
-        const content = input.value.trim();
-        
-        if (!content) return;
-
-        try {
-            const token = localStorage.getItem('ucc_token');
-            const response = await fetch(`${API_CONFIG.API_URL}/api/messages/send`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    receiver_id: this.currentChatFriend.friend_id,
-                    content
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                input.value = '';
-                this.loadMessages(this.currentChatFriend.friend_id);
-            } else {
-                this.showNotification(data.message, 'error');
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            this.showNotification('Error sending message', 'error');
-        }
+    bubble(message, mine) {
+        const own = Number(message.sender_id) === Number(mine);
+        return `
+            <div class="message ${own ? 'message-sent' : 'message-received'}" data-id="${message.id}">
+                <div class="message-content">
+                    <p>${this.esc(message.content)}</p>
+                    <small>${new Date(message.created_at).toLocaleTimeString()}</small>
+                </div>
+            </div>`;
     }
 
-    showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 10000;
-            animation: slideIn 0.3s ease;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+    onIncoming(message) {
+        if (!message || this.seen.has(message.id)) return;
+        const other = Number(message.sender_id) === Number(this.me().id) ? Number(message.receiver_id) : Number(message.sender_id);
+        if (this.current && Number(this.current.id) === other) {
+            const container = document.getElementById('chatMessages');
+            const empty = container.querySelector('.no-messages');
+            if (empty) empty.remove();
+            container.insertAdjacentHTML('beforeend', this.bubble(message, this.me().id));
+            this.seen.add(message.id);
+            container.scrollTop = container.scrollHeight;
+        } else if (Number(message.sender_id) !== Number(this.me().id)) {
+            this.showNotification('New message');
+        }
+        this.loadDirectory();
+    }
+
+    async sendMessage() {
+        if (!this.current) return;
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
+        if (!content) return;
+        input.value = '';
+        const response = await fetch('/api/messages/send', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${this.token()}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ receiver_id: this.current.id, content })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            input.value = content;
+            this.showNotification(data.message || 'Could not send', 'error');
+            return;
+        }
+        this.onIncoming({
+            id: data.message.id,
+            sender_id: this.me().id,
+            receiver_id: this.current.id,
+            content: data.message.content,
+            created_at: data.message.created_at
+        });
+    }
+
+    showNotification(message, type) {
+        const note = document.createElement('div');
+        note.className = 'notification';
+        note.textContent = message;
+        note.style.cssText = `position:fixed;top:20px;right:20px;padding:14px 18px;background:${type === 'error' ? '#c62828' : '#128a3a'};color:#fff;border-radius:10px;z-index:10000`;
+        document.body.appendChild(note);
+        setTimeout(() => note.remove(), 2800);
     }
 }
 
-// Initialize when DOM is ready and make globally available
 window.friendsSystem = null;
 document.addEventListener('DOMContentLoaded', () => {
     window.friendsSystem = new StudentFriendsSystem();
-    console.log('✅ Friends system created and ready');
 });

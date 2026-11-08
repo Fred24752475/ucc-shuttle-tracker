@@ -1,5 +1,50 @@
 /* Student Friends & Messaging System CSS */
 
+.chat-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 20px;
+}
+
+.chat-tab-btn {
+    border: 0;
+    background: #eef1f4;
+    color: #1c1c1c;
+    border-radius: 999px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.chat-tab-btn.active {
+    background: #128a3a;
+    color: white;
+}
+
+.chat-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 360px) 1fr;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.chat-back {
+    display: none;
+    border: 0;
+    background: transparent;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.chat-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+}
+
 .friends-list, .friend-requests-list, .students-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -328,6 +373,23 @@
     }
     
     .chat-container {
-        height: 500px;
+        display: none;
+        height: 70vh;
+    }
+
+    .chat-layout.chat-open .chat-container {
+        display: flex;
+    }
+
+    .chat-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-layout.chat-open .chat-directory {
+        display: none;
+    }
+
+    .chat-layout.chat-open .chat-back {
+        display: inline-flex;
     }
 }

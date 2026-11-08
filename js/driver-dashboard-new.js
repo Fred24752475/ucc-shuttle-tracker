@@ -246,7 +246,7 @@ function navigateToSection(section) {
     console.log('🔄 Navigating to section:', section);
     
     // Hide all sections
-    const sections = ['homeSection', 'viewMapSection', 'startTripSection', 'activeRouteSection', 'completedTripsSection', 'notificationsSection', 'supportSection', 'profileSection'];
+    const sections = ['homeSection', 'viewMapSection', 'startTripSection', 'activeRouteSection', 'completedTripsSection', 'notificationsSection', 'supportSection', 'profileSection', 'messagesSection'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -273,7 +273,8 @@ function navigateToSection(section) {
         'completed-trips': 'completedTripsSection',
         'notifications': 'notificationsSection',
         'support': 'supportSection',
-        'profile': 'profileSection'
+        'profile': 'profileSection',
+        'messages': 'messagesSection'
     };
 
     const targetSectionId = sectionMap[section];
@@ -320,6 +321,9 @@ function loadSectionContent(section) {
             break;
         case 'profile':
             loadProfileContent();
+            break;
+        case 'messages':
+            if (window.friendsSystem) window.friendsSystem.init();
             break;
     }
 }

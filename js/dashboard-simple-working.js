@@ -119,6 +119,9 @@ window.StudentDashboardSimple = {
             targetSection.style.display = 'block';
             console.log(`✅ SIMPLE showing: ${targetSectionId}`);
         }
+        if (section === 'messages' && window.friendsSystem) {
+            setTimeout(() => window.friendsSystem.init(), 60);
+        }
         if (section === 'map' && window.CampusLiveMap) {
             setTimeout(() => window.CampusLiveMap.attach('studentShuttleMap'), 120);
         }
