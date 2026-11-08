@@ -633,6 +633,16 @@ input:focus, select:focus, textarea:focus {
 
     body.admin-app .sidebar.open { transform: none !important; }
 
+    [data-section="ai-assistant"],
+    #aiAssistantSection,
+    #aiAssistantSection #aiInputContainer,
+    #aiInputContainer,
+    .ai-chat-header-mobile,
+    .ai-input-container {
+        display: none !important;
+        position: static !important;
+    }
+
     .phone-logout {
         display: inline-flex !important;
         position: fixed;
