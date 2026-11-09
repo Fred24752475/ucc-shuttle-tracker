@@ -2,6 +2,10 @@
 
 // Handle pickup location setting
 async function handleSetPickupLocation() {
+    if (typeof openMyStop === 'function') {
+        openMyStop();
+        return;
+    }
     console.log('📍 Setting pickup location for ETA alerts...');
     
     // Campus locations for selection

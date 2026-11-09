@@ -1927,9 +1927,9 @@ app.get('/api/help/faq', authenticateToken, (req, res) => {
     res.json({
         success: true,
         faqs: [
-            { category: 'Booking', question: 'How do I book a ride?', answer: 'Open My Rides and choose Book a Ride. Enter your pickup and destination.' },
-            { category: 'Booking', question: 'Can I cancel a ride?', answer: 'Yes. Open My Rides and press Cancel on a ride that has not finished.' },
-            { category: 'Tracking', question: 'How do I see the shuttle?', answer: 'Open the map. Active shuttles appear when a driver has started a route.' },
+            { category: 'Tracking', question: 'How do I follow a shuttle?', answer: 'On the student home, tap a bus in the list. Every bus stays on the map, and the one you tap is highlighted.' },
+            { category: 'Tracking', question: 'How do I save my stop?', answer: 'Open My stop and choose West Gate, East Gate, Administration, Science, Library, Hospital, or Halls.' },
+            { category: 'Tracking', question: 'How do I see the shuttle?', answer: 'Open the map. Every active shuttle stays on it.' },
             { category: 'Account', question: 'I forgot my password', answer: 'Use Forgot Password on the login page. A reset code is stored for your account.' }
         ]
     });
@@ -2423,7 +2423,7 @@ app.post('/api/ai/chat', authenticateToken, async (req, res) => {
         const system = [
             'You are the assistant inside the UCC Shuttle Tracker for the University of Cape Coast. Write plain sentences. Do not use markdown, asterisks, or code.',
             'Answer only about this app. Be short, plain, and practical. Tell the person which screen to open.',
-            'Students can book a ride from My Rides. Pickup and destination are West Gate, East Gate, Administration, Science, Library, Hospital, or Halls. The two stops must be different. A booked ride costs 2 cedis.',
+            'Students do not reserve a seat. They save one stop: West Gate, East Gate, Administration, Science, Library, Hospital, or Halls. They can follow one shuttle, and every other bus stays on the map. An on-screen banner appears once when a live shuttle is about 5 minutes from the saved stop.',
             'The map uses OpenStreetMap and shows the student plus buses moving on the UCC campus. Open it from Map in the sidebar or the middle button on the phone.',
             'Messages: a student adds another student, and chat starts only after that person accepts. A student can message a driver immediately from the Drivers tab. Admins are not in chat.',
             'Profile is for name, phone, department, a photo, and changing the password. If no photo is uploaded, the picture follows the email address.',

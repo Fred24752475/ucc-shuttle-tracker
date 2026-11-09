@@ -355,9 +355,7 @@ function hideAllSections() {
 
 // ============= ACTION HANDLERS =============
 function handleRequestRideClick() {
-    console.log('🎫 Request Ride clicked');
-    if (typeof showRides === 'function') showRides();
-    if (typeof showBookingForm === 'function') showBookingForm();
+    if (typeof openMyStop === 'function') openMyStop();
 }
 
 function handleTrackShuttleClick() {
@@ -565,14 +563,14 @@ function addAIMessage(message, type) {
 function getAIResponse(message) {
     const msg = message.toLowerCase();
 
-    if (msg.includes('book') || msg.includes('ride')) {
-        return "I can help you book a ride! Would you like me to show you available shuttles and help you select your pickup and destination?";
+    if (msg.includes('book') || msg.includes('ride') || msg.includes('stop') || msg.includes('follow')) {
+        return "Save My stop, then tap a bus in the list. Every shuttle stays on the map, and a banner shows when one is about 5 minutes away.";
     } else if (msg.includes('track') || msg.includes('where')) {
         return "You can track shuttles in real-time on the map. Would you like me to open the map view for you?";
     } else if (msg.includes('emergency')) {
         return "For emergencies, please use the Emergency Alert button or call campus security immediately. Is this an emergency?";
     } else {
-        return "I'm here to help! You can ask me about booking rides, tracking shuttles, viewing your trip history, or getting help. What would you like to know?";
+        return "I'm here to help. You can ask about the live shuttles, your stop, or the map. What would you like to know?";
     }
 }
 
@@ -593,28 +591,8 @@ function loadRides() {
     loadRidesForTab('upcoming');
 }
 
-async function loadRidesForTab(tabType) {
-    const ridesList = document.getElementById('ridesList');
-    if (!ridesList) return;
-    ridesList.innerHTML = '<div class="loading-spinner"></div>';
-    try {
-        const data = await apiRequest(`/rides?status=${tabType}`);
-        if (!data.success || !data.rides || data.rides.length === 0) {
-            ridesList.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #666;">
-                    <i class="fas fa-car" style="font-size: 48px; margin-bottom: 16px; color: #ddd;"></i>
-                    <p>No ${tabType} rides found</p>
-                    <button onclick="showBookingForm()" style="margin-top: 12px; background: #1565c0; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
-                        Book a Ride
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        ridesList.innerHTML = data.rides.map((ride) => window.renderRideTicket(ride, tabType === 'upcoming')).join('');
-    } catch (error) {
-        ridesList.innerHTML = '<p style="padding:20px;">Could not load rides. Please refresh.</p>';
-    }
+async function loadRidesForTab() {
+    if (typeof renderMyStop === 'function') renderMyStop();
 }
 
 function loadTripHistory(filter = 'all') {

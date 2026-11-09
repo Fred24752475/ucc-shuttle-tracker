@@ -228,10 +228,10 @@ window.StudentDashboardSimple = {
                 <div style="position: absolute; top: 65%; left: 20%; width: 60%; height: 3px; background: #7f8c8d; border-radius: 2px;"></div>
                 
                 <!-- Shuttle Markers -->
-                <div onclick="window.StudentDashboardSimple.bookShuttle('Library')" style="position: absolute; top: 25%; left: 35%; width: 40px; height: 40px; background: #27ae60; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Library Shuttle - Available (5 min)">🚌</div>
-                <div onclick="window.StudentDashboardSimple.bookShuttle('Science')" style="position: absolute; top: 20%; left: 65%; width: 40px; height: 40px; background: #f39c12; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Science Shuttle - In Use (12 min)">🚌</div>
-                <div onclick="window.StudentDashboardSimple.bookShuttle('Hostel')" style="position: absolute; top: 65%; left: 50%; width: 40px; height: 40px; background: #27ae60; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Hostel Shuttle - Available (8 min)">🚌</div>
-                <div onclick="window.StudentDashboardSimple.bookShuttle('Main Gate')" style="position: absolute; top: 75%; left: 20%; width: 40px; height: 40px; background: #95a5a6; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Main Gate Shuttle - Offline">🚌</div>
+                <div onclick="window.StudentDashboardSimple.selectShuttleMarker('Library')" style="position: absolute; top: 25%; left: 35%; width: 40px; height: 40px; background: #27ae60; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Library Shuttle - Available (5 min)">🚌</div>
+                <div onclick="window.StudentDashboardSimple.selectShuttleMarker('Science')" style="position: absolute; top: 20%; left: 65%; width: 40px; height: 40px; background: #f39c12; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Science Shuttle - In Use (12 min)">🚌</div>
+                <div onclick="window.StudentDashboardSimple.selectShuttleMarker('Hostel')" style="position: absolute; top: 65%; left: 50%; width: 40px; height: 40px; background: #27ae60; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Hostel Shuttle - Available (8 min)">🚌</div>
+                <div onclick="window.StudentDashboardSimple.selectShuttleMarker('Main Gate')" style="position: absolute; top: 75%; left: 20%; width: 40px; height: 40px; background: #95a5a6; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3); transition: all 0.2s; z-index: 10;" title="Main Gate Shuttle - Offline">🚌</div>
                 
                 <!-- Labels -->
                 <div style="position: absolute; top: 18%; left: 32%; font-size: 11px; color: #2c3e50; font-weight: bold; text-shadow: 0 1px 2px white;">MAIN</div>
@@ -271,7 +271,7 @@ window.StudentDashboardSimple = {
         
         // Add hover effects to shuttles
         setTimeout(() => {
-            const shuttleElements = shuttleMap.querySelectorAll('[onclick*="bookShuttle"]');
+            const shuttleElements = shuttleMap.querySelectorAll('[onclick*="selectShuttleMarker"]');
             shuttleElements.forEach(shuttle => {
                 shuttle.addEventListener('mouseenter', () => {
                     shuttle.style.transform = 'scale(1.2)';
@@ -287,17 +287,8 @@ window.StudentDashboardSimple = {
         console.log('✅ Fallback map loaded successfully!');
     },
     
-    bookShuttle: function(shuttleName) {
-        console.log(`🚌 Booking ${shuttleName}...`);
-        
-        const eta = {
-            'Library': '5 minutes',
-            'Science': '12 minutes', 
-            'Hostel': '8 minutes',
-            'Main Gate': 'Not available'
-        };
-        
-        alert(`🎫 UCC Shuttle Booking\\n\\n🚌 ${shuttleName} Shuttle\\n⏱️ ETA: ${eta[shuttleName]}\\n\\n✅ Your ride has been booked!\\n\\nPlease wait at the designated pickup point.`);
+    selectShuttleMarker: function(shuttleName) {
+        console.log('Shuttle marker selected', shuttleName);
     },
     
     refreshMap: function() {

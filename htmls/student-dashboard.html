@@ -48,6 +48,7 @@
 </head>
 
 <body>
+    <div id="arrivalBanner" class="arrival-banner" hidden role="status"></div>
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -71,7 +72,7 @@
                 <li class="nav-item" data-section="rides">
                     <a href="#rides">
                         <i data-lucide="car"></i>
-                        <span data-translate="my-rides">My Rides</span>
+                        <span>My stop</span>
                     </a>
                 </li>
                 <li class="nav-item" data-section="map">
@@ -157,12 +158,12 @@
             <section class="quick-actions-section">
                 <h2 class="section-title" data-translate="quick-actions">Quick Actions</h2>
                 <div class="action-cards">
-                    <div class="action-card primary" onclick="handleRequestRideClick()">
+                    <div class="action-card primary" onclick="openMyStop()">
                         <div class="action-icon">
-                            <i data-lucide="plus"></i>
+                            <i data-lucide="map-pin"></i>
                         </div>
-                        <h3 data-translate="request-ride">Request Ride</h3>
-                        <p data-translate="book-shuttle">Book a shuttle to your destination</p>
+                        <h3>My stop</h3>
+                        <p>Save the campus stop where you wait</p>
                     </div>
 
                     <div class="action-card info" onclick="handleTrackShuttleClick()">
@@ -173,12 +174,12 @@
                         <p data-translate="see-real-time">See real-time shuttle locations</p>
                     </div>
                     
-                    <div class="action-card success" onclick="handleSetPickupLocation()">
+                    <div class="action-card success" onclick="document.getElementById('shuttleList').scrollIntoView({behavior:'smooth', block:'center'})">
                         <div class="action-icon">
                             <i data-lucide="locate-fixed"></i>
                         </div>
-                        <h3 data-translate="set-pickup">Set Pickup Location</h3>
-                        <p data-translate="get-eta-alerts">Get ETA alerts when shuttles are near</p>
+                        <h3>Follow a shuttle</h3>
+                        <p>Tap one bus in the list. The others stay on the map.</p>
                     </div>
 
                     <div class="action-card warning" onclick="handleEmergencyClick()">
@@ -191,10 +192,10 @@
                 </div>
                 
                 <!-- ETA Alerts Panel -->
-                <div class="eta-alerts-panel" id="etaAlertsPanel" style="display: none;">
-                    <h3>🔔 ETA Notifications</h3>
+                <div class="eta-alerts-panel" id="etaAlertsPanel">
+                    <h3>My stop</h3>
                     <div class="current-pickup-location" id="currentPickupLocation">
-                        <div class="no-location">No pickup location set. Click "Set Pickup Location" to get ETA alerts.</div>
+                        <div class="no-location">No stop saved yet. Choose My stop, then tap a bus to follow it.</div>
                     </div>
                     <div class="recent-eta-alerts" id="recentETAAlerts">
                         <div class="no-alerts">No recent ETA alerts</div>
@@ -245,7 +246,7 @@
                         <div class="current-trip-info" id="currentTripInfo">
                             <div class="trip-status-item">
                                 <span class="trip-label">Status:</span>
-                                <span class="trip-value" id="tripStatusValue" data-translate="no-active-trip">No active trip</span>
+                                <span class="trip-value" id="tripStatusValue">Not following a shuttle</span>
                             </div>
                             <div class="trip-status-item">
                                 <span class="trip-label">Driver:</span>
@@ -264,17 +265,9 @@
                                 <span class="trip-value" id="tripETA">--</span>
                             </div>
                         </div>
-                        <div class="trip-actions" id="tripActions" style="display: none;">
-                            <button class="trip-action-btn cancel" onclick="cancelCurrentTrip()">
-                                <i class="fas fa-times"></i> Cancel Trip
-                            </button>
-                            <button class="trip-action-btn reschedule" onclick="rescheduleCurrentTrip()">
-                                <i class="fas fa-clock"></i> Reschedule
-                            </button>
-                        </div>
                     </div>
                     <div class="widget-footer">
-                        <button class="widget-btn" onclick="handleCurrentTripClick()">Manage Trip →</button>
+                        <button class="widget-btn" type="button" onclick="openMyStop()">My stop →</button>
                     </div>
                 </div>
 
@@ -431,9 +424,9 @@
                             <i class="fas fa-map-marker-alt"></i>
                             <span data-translate="find-shuttle">Find Shuttle</span>
                         </button>
-                        <button class="quick-action-btn" onclick="sendQuickMessage('Book a ride to library')">
-                            <i class="fas fa-book"></i>
-                            <span data-translate="book-ride">Book Ride</span>
+                        <button class="quick-action-btn" type="button" onclick="openMyStop()">
+                            <i class="fas fa-map-pin"></i>
+                            <span>My stop</span>
                         </button>
                         <button class="quick-action-btn" onclick="sendQuickMessage('What are the shuttle schedules?')">
                             <i class="fas fa-clock"></i>
@@ -476,48 +469,18 @@
         </main>
 
 
-        <!-- My Rides Section -->
+        <!-- Saved stop. This is not a booking page. -->
         <main class="rides-section" id="ridesSection" style="display: none;">
             <div class="section-header">
-                <h2>🚗 My Rides</h2>
+                <h2>My stop</h2>
                 <button class="back-btn" onclick="showDashboard(); return false;">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </button>
             </div>
             <div class="rides-content">
-                <form id="bookRideForm" class="book-ride-form">
-                    <label>Pickup
-                        <select id="bookPickup" required>
-                            <option>West Gate</option>
-                            <option>East Gate</option>
-                            <option>Administration</option>
-                            <option>Science</option>
-                            <option>Library</option>
-                            <option>Hospital</option>
-                            <option>Halls</option>
-                        </select>
-                    </label>
-                    <label>Destination
-                        <select id="bookDestination" required>
-                            <option>Administration</option>
-                            <option>Science</option>
-                            <option>Library</option>
-                            <option>Hospital</option>
-                            <option>Halls</option>
-                            <option>West Gate</option>
-                            <option>East Gate</option>
-                        </select>
-                    </label>
-                    <button type="submit" class="btn-primary">Book a Ride</button>
-                </form>
-                <div class="ride-tabs">
-                    <button class="tab-btn active" onclick="switchRideTab('upcoming')">Upcoming Rides</button>
-                    <button class="tab-btn" onclick="switchRideTab('history')">Ride History</button>
-                    <button class="tab-btn" onclick="switchRideTab('cancelled')">Cancelled</button>
-                </div>
-                <div class="rides-list" id="ridesList">
-                    <div class="loading-spinner"></div>
-                </div>
+                <p id="savedStopSummary">Choose the stop where you wait. A banner appears when a live shuttle is about 5 minutes away.</p>
+                <div class="stop-choices" id="campusStopList"></div>
+                <p id="followedShuttleSummary">Tap a shuttle on the home list to follow it. Every other bus stays on the map.</p>
             </div>
         </main>
 
@@ -595,9 +558,8 @@
                     <div class="faq-section" id="faqSection">
                         <div class="faq-list">
                             <div class="faq-item">
-                                <h4>How do I book a shuttle?</h4>
-                                <p>Click the "Request Ride" button on your dashboard, select your pickup and
-                                    destination, then submit your request.</p>
+                                <h4>How do I follow a shuttle?</h4>
+                                <p>Tap a bus in the shuttle list. Every bus stays on the map, and the one you tap is highlighted.</p>
                             </div>
                             <div class="faq-item">
                                 <h4>How can I track my shuttle?</h4>
@@ -610,8 +572,8 @@
                                     provided.</p>
                             </div>
                             <div class="faq-item">
-                                <h4>How do I cancel a ride?</h4>
-                                <p>Go to "My Rides" and click the cancel button on your upcoming ride.</p>
+                                <h4>How do I save my stop?</h4>
+                                <p>Open My stop and choose West Gate, East Gate, Administration, Science, Library, Hospital, or Halls.</p>
                             </div>
                         </div>
                     </div>
@@ -691,7 +653,7 @@
         </div>
         <div class="nav-item-mobile" data-section="rides">
             <div class="nav-icon-mobile"><i data-lucide="car"></i></div>
-            <span class="nav-label-mobile">Rides</span>
+            <span class="nav-label-mobile">Stop</span>
         </div>
         <div class="nav-item-mobile center" data-section="map">
             <div class="nav-icon-mobile"><i data-lucide="map"></i></div>
@@ -1249,19 +1211,19 @@ function showMapError() {
                             </div>
                             
                             <!-- Ghana Locations -->
-                            <div style="position: absolute; top: 180px; left: 150px; background: #1565c0; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🎓 UCC Library - Click to book shuttle')">
+                            <div style="position: absolute; top: 180px; left: 150px; background: #1565c0; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" >
                                 📚
                             </div>
-                            <div style="position: absolute; top: 150px; left: 300px; background: #27ae60; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🔬 UCC Science Block - Click to book shuttle')">
+                            <div style="position: absolute; top: 150px; left: 300px; background: #27ae60; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" >
                                 🔬
                             </div>
-                            <div style="position: absolute; top: 250px; left: 200px; background: #f39c12; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🏠 UCC Hostel - Click to book shuttle')">
+                            <div style="position: absolute; top: 250px; left: 200px; background: #f39c12; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" >
                                 🏠
                             </div>
-                            <div style="position: absolute; top: 120px; left: 380px; background: #e74c3c; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🚪 UCC Main Gate - Click to book shuttle')">
+                            <div style="position: absolute; top: 120px; left: 380px; background: #e74c3c; color: white; padding: 8px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" >
                                 🚪
                             </div>
-                            <div style="position: absolute; top: 200px; left: 450px; background: #9b59b6; color: white; padding: 8px; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" onclick="alert('🏙️ Cape Town - Click to book shuttle')">
+                            <div style="position: absolute; top: 200px; left: 450px; background: #9b59b6; color: white; padding: 8px; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" >
                                 🏙️
                             </div>
                             
@@ -1408,8 +1370,6 @@ function showMapError() {
                                     <div style="padding: 10px;">
                                         <h4 style="margin: 0 0 8px 0; color: #1565c0;">${shuttle.name}</h4>
                                         <p style="margin: 4px 0;">Status: <strong style="color: ${color}">${shuttle.status}</strong></p>
-                                        <p style="margin: 4px 0;">ETA: ${shuttle.status === 'Available' ? Math.floor(Math.random() * 10 + 3) : Math.floor(Math.random() * 15 + 5)} minutes</p>
-                                        <button onclick="alert('🎫 Booking ${shuttle.name}!')" style="background: #1565c0; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Book Now</button>
                                     </div>
                                 `);
 
@@ -1502,11 +1462,12 @@ function showMapError() {
         }
 
         function showRides() {
-            console.log('🚗 SHOW RIDES');
+            console.log('🚌 SHOW STOP');
             hideAllSections();
             const ridesSection = document.getElementById('ridesSection');
             if (ridesSection) {
                 ridesSection.style.display = 'block';
+                if (typeof renderMyStop === 'function') renderMyStop();
             }
         }
 

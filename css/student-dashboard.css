@@ -533,6 +533,75 @@ body {
     margin-bottom: 0;
 }
 
+button.shuttle-item {
+    width: 100%;
+    border: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.shuttle-item.is-followed {
+    border-left-color: #0b5cab;
+    box-shadow: inset 0 0 0 2px #f5c518;
+}
+
+.stop-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 16px 0 24px;
+}
+
+.stop-choice {
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 2px solid #d7e0ea;
+    background: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.stop-choice.is-saved {
+    border-color: #0b5cab;
+    background: #e8f2fb;
+    font-weight: 700;
+}
+
+.arrival-banner {
+    position: fixed;
+    z-index: 12000;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(560px, calc(100% - 24px));
+    padding: 14px 16px;
+    background: #0b5cab;
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.arrival-banner[hidden] {
+    display: none !important;
+}
+
+.arrival-banner button {
+    background: #fff;
+    color: #0b5cab;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .shuttle-name {
     font-weight: 600;
     color: var(--dark-color);

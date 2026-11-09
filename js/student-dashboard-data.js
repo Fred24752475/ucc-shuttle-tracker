@@ -62,27 +62,43 @@ async function loadDashboardData() {
     await loadShuttleList();
 }
 
+let lastShuttles = [];
+
 async function loadShuttleList() {
     const shuttleList = document.getElementById('shuttleList');
     try {
         const data = await apiRequest('/shuttles/active');
         const shuttles = (data && data.shuttles) || [];
+        lastShuttles = shuttles;
         const countEl = document.getElementById('activeShuttlesCount');
         if (countEl) countEl.textContent = shuttles.length;
         if (!shuttleList) return;
         if (!shuttles.length) {
             shuttleList.innerHTML = '<p class="shuttle-empty">No shuttle is on the road right now.</p>';
+            updateFollowedTripPanel([]);
             return;
         }
-        shuttleList.innerHTML = shuttles.map((shuttle) => `
-            <div class="shuttle-item">
+        const followed = window.CampusLiveMap && window.CampusLiveMap.getFollowed ? window.CampusLiveMap.getFollowed() : null;
+        shuttleList.innerHTML = shuttles.map((shuttle) => {
+            const active = followed != null && String(shuttle.id) === String(followed);
+            return `
+            <button type="button" class="shuttle-item${active ? ' is-followed' : ''}" data-shuttle-id="${ticketText(shuttle.id)}">
                 <div class="shuttle-info">
                     <span class="shuttle-name">${ticketText(shuttle.vehicle_number || shuttle.vehicleNumber || 'Shuttle')}</span>
                     <span class="shuttle-route">${ticketText(shuttle.routeName || 'Campus Express')} · ${ticketText(shuttle.driver_name || shuttle.driverName || 'Driver')}</span>
                 </div>
-                <span class="shuttle-status active">On road</span>
-            </div>
-        `).join('');
+                <span class="shuttle-status active">${active ? 'Following' : 'On road'}</span>
+            </button>`;
+        }).join('');
+        if (!shuttleList.dataset.bound) {
+            shuttleList.dataset.bound = '1';
+            shuttleList.addEventListener('click', (event) => {
+                const item = event.target.closest('[data-shuttle-id]');
+                if (!item) return;
+                window.followShuttle(item.dataset.shuttleId);
+            });
+        }
+        updateFollowedTripPanel(shuttles);
     } catch (error) {
         if (shuttleList) shuttleList.innerHTML = '<p class="shuttle-empty">Shuttles could not be loaded. Pull to refresh.</p>';
     }
@@ -100,7 +116,6 @@ window.renderRideTicket = function (ride, allowCancel) {
     const time = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const status = String(ride.status || 'pending');
     const fare = Number(ride.fare || 0).toFixed(2);
-    const canCancel = allowCancel && status !== 'completed' && status !== 'cancelled';
     return `
         <article class="ticket ${ticketText(status)}">
             <header class="ticket-top">
@@ -115,83 +130,226 @@ window.renderRideTicket = function (ride, allowCancel) {
             <footer class="ticket-meta">
                 <span>${ticketText(ride.driver_name || 'Driver')}</span>
                 <span>${ticketText(ride.shuttle_number || ride.vehicle_number || 'Shuttle')}</span>
-                ${canCancel ? `<button type="button" class="ticket-cancel" onclick="cancelRide(${Number(ride.id)})">Cancel</button>` : ''}
             </footer>
         </article>`;
 };
 
-// ============= MY RIDES DATA LOADING =============
+// ============= MY STOP AND FOLLOW =============
+const CAMPUS_STOPS = [
+    { name: 'West Gate', latitude: 5.1085, longitude: -1.2980 },
+    { name: 'East Gate', latitude: 5.1160, longitude: -1.2795 },
+    { name: 'Administration', latitude: 5.1155, longitude: -1.2909 },
+    { name: 'Science', latitude: 5.1125, longitude: -1.2865 },
+    { name: 'Library', latitude: 5.1210, longitude: -1.2860 },
+    { name: 'Hospital', latitude: 5.1095, longitude: -1.2810 },
+    { name: 'Halls', latitude: 5.1110, longitude: -1.2765 }
+];
+const BUS_KMH = 25;
+let savedStop = null;
+const seenApproaches = new Set();
+
+/* approach-alert */
+function kmBetweenPoints(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function minutesToStop(shuttle, stop) {
+    const lat = Number(shuttle.latitude);
+    const lng = Number(shuttle.longitude);
+    if (!stop || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return (kmBetweenPoints(lat, lng, Number(stop.latitude), Number(stop.longitude)) / BUS_KMH) * 60;
+}
+
+function nextApproachAlert(seen, key, minutes) {
+    const aboutFive = minutes >= 4 && minutes <= 6;
+    if (aboutFive && !seen.has(key)) {
+        seen.add(key);
+        return true;
+    }
+    if (minutes < 3 || minutes > 7) seen.delete(key);
+    return false;
+}
+/* /approach-alert */
+
+function renderMyStop() {
+    const list = document.getElementById('campusStopList');
+    const summary = document.getElementById('savedStopSummary');
+    const home = document.getElementById('currentPickupLocation');
+    if (list) {
+        list.innerHTML = CAMPUS_STOPS.map((stop) => {
+            const selected = savedStop && savedStop.name === stop.name;
+            return `<button type="button" class="stop-choice${selected ? ' is-saved' : ''}" data-stop="${ticketText(stop.name)}">${ticketText(stop.name)}</button>`;
+        }).join('');
+        if (!list.dataset.bound) {
+            list.dataset.bound = '1';
+            list.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-stop]');
+                if (button) saveCampusStop(button.dataset.stop);
+            });
+        }
+    }
+    const sentence = savedStop
+        ? `Waiting at ${savedStop.name}. You will see one banner when a shuttle is about 5 minutes away.`
+        : 'Choose the stop where you wait. A banner appears when a live shuttle is about 5 minutes away.';
+    if (summary) summary.textContent = sentence;
+    if (home) home.innerHTML = `<div class="no-location">${ticketText(sentence)}</div>`;
+    const followed = window.CampusLiveMap && window.CampusLiveMap.getFollowed ? window.CampusLiveMap.getFollowed() : null;
+    const shuttle = lastShuttles.find((item) => String(item.id) === String(followed));
+    const followLine = document.getElementById('followedShuttleSummary');
+    if (followLine) {
+        followLine.textContent = shuttle
+            ? `Following ${shuttle.vehicle_number || shuttle.vehicleNumber || 'the shuttle'}. The other buses stay on the map.`
+            : 'Tap a shuttle on the home list to follow it. Every other bus stays on the map.';
+    }
+}
+
 async function loadRidesData() {
-    try {
-        const data = await apiRequest('/rides?status=upcoming');
-        const ridesList = document.getElementById('ridesList');
-
-        if (data.success && data.rides && data.rides.length > 0) {
-            ridesList.innerHTML = data.rides.map((ride) => window.renderRideTicket(ride, true)).join('');
-        } else {
-            ridesList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-car" style="font-size: 48px; color: #ddd;"></i>
-                    <p>No upcoming rides</p>
-                    <button onclick="showBookingForm()" class="btn-primary">Book a Ride</button>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error loading rides:', error);
-    }
+    renderMyStop();
 }
 
-window.showBookingForm = function () {
-    const form = document.getElementById('bookRideForm');
-    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+window.renderMyStop = renderMyStop;
+window.loadRidesData = loadRidesData;
+
+window.openMyStop = function () {
+    if (window.StudentDashboardSimple && typeof window.StudentDashboardSimple.showSection === 'function') {
+        window.StudentDashboardSimple.showSection('rides');
+        return;
+    }
+    if (typeof showRides === 'function') showRides();
+    else renderMyStop();
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('bookRideForm');
-    if (!form) return;
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const pickup = document.getElementById('bookPickup').value;
-        const destination = document.getElementById('bookDestination').value;
-        await bookRide({ pickup_location: pickup, destination });
+window.followShuttle = function (id) {
+    try { sessionStorage.setItem('ucc_follow_shuttle', String(id)); } catch (error) {}
+    if (window.CampusLiveMap && window.CampusLiveMap.setFollowed) window.CampusLiveMap.setFollowed(id);
+    document.querySelectorAll('#shuttleList .shuttle-item').forEach((item) => {
+        const active = item.dataset.shuttleId === String(id);
+        item.classList.toggle('is-followed', active);
+        const badge = item.querySelector('.shuttle-status');
+        if (badge) badge.textContent = active ? 'Following' : 'On road';
     });
-});
+    updateFollowedTripPanel(lastShuttles);
+    renderMyStop();
+};
 
-// Book a ride
-async function bookRide(formData) {
+function updateFollowedTripPanel(shuttles) {
+    const id = window.CampusLiveMap && window.CampusLiveMap.getFollowed ? window.CampusLiveMap.getFollowed() : null;
+    const shuttle = (shuttles || []).find((item) => String(item.id) === String(id));
+    const status = document.getElementById('tripStatusValue');
+    const driver = document.getElementById('tripDriverName');
+    const name = document.getElementById('tripShuttleName');
+    const route = document.getElementById('tripRoute');
+    const eta = document.getElementById('tripETA');
+    if (!shuttle) {
+        if (status) status.textContent = 'Not following a shuttle';
+        if (driver) driver.textContent = '--';
+        if (name) name.textContent = '--';
+        if (route) route.textContent = '--';
+        if (eta) eta.textContent = savedStop ? savedStop.name : '--';
+        return;
+    }
+    if (status) status.textContent = 'Following';
+    if (driver) driver.textContent = shuttle.driver_name || shuttle.driverName || 'Driver';
+    if (name) name.textContent = shuttle.vehicle_number || shuttle.vehicleNumber || 'Shuttle';
+    if (route) route.textContent = shuttle.routeName || 'Campus Express';
+    if (eta) eta.textContent = savedStop ? `Watching ${savedStop.name}` : 'Choose a stop';
+}
+
+async function saveCampusStop(name) {
+    const stop = CAMPUS_STOPS.find((item) => item.name === name);
+    if (!stop) return;
+    const summary = document.getElementById('savedStopSummary');
     try {
-        const data = await apiRequest('/rides/book', {
+        await apiRequest('/student/pickup-location', {
             method: 'POST',
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+                location_name: stop.name,
+                latitude: stop.latitude,
+                longitude: stop.longitude
+            })
         });
-
-        if (data.success) {
-            if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
-            else loadRidesData();
-        } else {
-            alert(data.message || 'Could not book that ride');
+        savedStop = { name: stop.name, latitude: stop.latitude, longitude: stop.longitude };
+        seenApproaches.clear();
+        const banner = document.getElementById('arrivalBanner');
+        if (banner) {
+            banner.hidden = true;
+            delete banner.dataset.key;
         }
+        renderMyStop();
     } catch (error) {
-        alert(window.readableProblem ? window.readableProblem(error) : 'That ride could not be booked. Try again.');
+        if (summary) summary.textContent = 'That stop could not be saved. Try again.';
     }
 }
 
-// Cancel a ride
-window.cancelRide = async function (rideId) {
-    if (!confirm('Are you sure you want to cancel this ride?')) return;
-
+async function loadSavedStop() {
     try {
-        const data = await apiRequest(`/rides/${rideId}`, { method: 'DELETE' });
-
-        if (data.success) {
-            alert('✅ Ride cancelled successfully');
-            loadRidesData();
+        const data = await apiRequest('/student/pickup-location');
+        const pref = data && data.preference;
+        if (pref && pref.location_name) {
+            const known = CAMPUS_STOPS.find((stop) => stop.name === pref.location_name);
+            const latitude = Number(pref.latitude);
+            const longitude = Number(pref.longitude);
+            savedStop = {
+                name: pref.location_name,
+                latitude: Number.isFinite(latitude) ? latitude : known && known.latitude,
+                longitude: Number.isFinite(longitude) ? longitude : known && known.longitude
+            };
         }
     } catch (error) {
-        alert('That ride could not be cancelled. Try again.');
+        console.error('Could not load saved stop', error);
     }
-};
+    renderMyStop();
+}
+
+function showArrivalBanner(shuttle, stop, minutes, key) {
+    const banner = document.getElementById('arrivalBanner');
+    if (!banner) return false;
+    if (!banner.hidden && banner.dataset.key !== key) return false;
+    if (banner.dataset.key === key && !banner.hidden) return true;
+    const bus = shuttle.vehicle_number || shuttle.vehicleNumber || 'Shuttle';
+    const mins = Math.max(1, Math.round(minutes));
+    banner.hidden = false;
+    banner.dataset.key = key;
+    banner.innerHTML = `<span><strong>${ticketText(bus)}</strong> is ${mins} minutes from ${ticketText(stop.name)}.</span><button type="button">Dismiss</button>`;
+    banner.querySelector('button').onclick = () => {
+        banner.hidden = true;
+    };
+    return true;
+}
+
+function checkArrivals() {
+    if (!savedStop || !window.CampusLiveMap || typeof window.CampusLiveMap.getFleet !== 'function') return;
+    window.CampusLiveMap.getFleet().forEach((shuttle) => {
+        const minutes = minutesToStop(shuttle, savedStop);
+        if (!Number.isFinite(minutes)) return;
+        const key = `${shuttle.id}:${savedStop.name}`;
+        if (nextApproachAlert(seenApproaches, key, minutes) && !showArrivalBanner(shuttle, savedStop, minutes, key)) {
+            seenApproaches.delete(key);
+        }
+    });
+}
+
+window.addEventListener('campus-shuttle-follow', (event) => {
+    const id = event.detail && event.detail.id;
+    if (!id) return;
+    document.querySelectorAll('#shuttleList .shuttle-item').forEach((item) => {
+        const active = item.dataset.shuttleId === String(id);
+        item.classList.toggle('is-followed', active);
+        const badge = item.querySelector('.shuttle-status');
+        if (badge) badge.textContent = active ? 'Following' : 'On road';
+    });
+    updateFollowedTripPanel(lastShuttles);
+    const followLine = document.getElementById('followedShuttleSummary');
+    const shuttle = lastShuttles.find((item) => String(item.id) === String(id));
+    if (followLine && shuttle) {
+        followLine.textContent = `Following ${shuttle.vehicle_number || shuttle.vehicleNumber || 'the shuttle'}. The other buses stay on the map.`;
+    }
+});
 
 // ============= TRIP HISTORY DATA LOADING =============
 async function loadTripHistoryData(filters = {}) {
@@ -339,13 +497,8 @@ async function sendAIQuery(message) {
         response = delayResponses[Math.floor(Math.random() * delayResponses.length)];
     }
     // Booking
-    else if (lowerMessage.includes('book') || lowerMessage.includes('request') || lowerMessage.includes('ride')) {
-        const bookingResponses = [
-            "📱 Ready to book? Just tap the 'Request Ride' button on your dashboard. Pick your location and destination, and we'll find you a shuttle!",
-            "🚌 Want to book a ride? Easy! Use the 'Request Ride' button, select pickup and drop-off points, and you're all set!",
-            "📍 Booking is simple! Hit 'Request Ride' on your dashboard, choose your route, and I'll match you with the nearest shuttle."
-        ];
-        response = bookingResponses[Math.floor(Math.random() * bookingResponses.length)];
+    else if (lowerMessage.includes('book') || lowerMessage.includes('request') || lowerMessage.includes('ride') || lowerMessage.includes('stop') || lowerMessage.includes('follow')) {
+        response = "Save My stop, then tap a bus in the shuttle list. Every bus stays on the map, and a banner appears when one is about 5 minutes from your stop.";
     }
     // Emergency
     else if (lowerMessage.includes('emergency')) {
@@ -396,10 +549,10 @@ async function sendAIQuery(message) {
     // Default
     else {
         const defaultResponses = [
-            "🤖 I can help you with shuttle schedules, booking rides, checking delays, emergencies, and more! What would you like to know?",
-            "🚌 I'm here to assist! Ask me about shuttle times, how to book, fares, or anything else about UCC shuttle service.",
-            "👋 Not sure what you need? I can help with schedules, bookings, delays, contact info, and more. Just ask!",
-            "✨ I'm your shuttle assistant! I can tell you about routes, times, booking, costs, and emergency contacts. What interests you?"
+            "I can help with shuttle times, your saved stop, following a bus, delays, and emergencies. What would you like to know?",
+            "Ask me about the live shuttles, where to wait, or how the 5 minute banner works.",
+            "I can help you follow a shuttle and save West Gate, East Gate, Administration, Science, Library, Hospital, or Halls.",
+            "Tell me which stop you are waiting at, or ask where the shuttles are."
         ];
         response = defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
     }
@@ -505,8 +658,9 @@ const originalShowRides = window.showRides;
 window.showRides = function () {
     originalShowRides?.();
     hideAllSections();
-    document.getElementById('ridesSection').style.display = 'block';
-    loadRidesData();
+    const ridesSection = document.getElementById('ridesSection');
+    if (ridesSection) ridesSection.style.display = 'block';
+    renderMyStop();
 };
 
 // Enhanced map initialization
@@ -554,14 +708,19 @@ window.showHelp = function () {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function () {
     loadDashboardData();
-    if (typeof io === 'function') {
-        const socket = io();
-        socket.on('ride:update', () => {
-            if (typeof loadRidesData === 'function') loadRidesData();
-            if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
-        });
-    }
-
+    loadSavedStop();
+    renderMyStop();
+    try {
+        const savedFollow = sessionStorage.getItem('ucc_follow_shuttle');
+        if (savedFollow && window.CampusLiveMap && window.CampusLiveMap.setFollowed) {
+            window.CampusLiveMap.setFollowed(savedFollow);
+        }
+    } catch (error) {}
+    checkArrivals();
+    setInterval(checkArrivals, 2000);
+    setInterval(() => {
+        if (document.getElementById('shuttleList')) loadShuttleList();
+    }, 10000);
     console.log('✅ Dashboard data loader initialized');
 });
 

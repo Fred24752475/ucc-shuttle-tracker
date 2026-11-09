@@ -6,6 +6,7 @@
     let shuttles = [];
     let animating = false;
     let socketBound = false;
+    let followedId = null;
 
     function pointOnRoute(route, startedAt, loopMs, now) {
         if (!route || route.length < 2 || !startedAt) return null;
@@ -22,14 +23,22 @@
         return { lat, lng, bearing };
     }
 
-    function carIcon(bearing) {
+    function isFollowed(shuttle) {
+        return followedId != null && String(shuttle.id) === String(followedId);
+    }
+
+    function carIcon(bearing, followed) {
         const compact = window.matchMedia('(max-width: 900px)').matches;
-        const width = compact ? 22 : 34;
-        const height = compact ? 34 : 58;
+        const width = followed ? (compact ? 26 : 40) : (compact ? 22 : 34);
+        const height = followed ? (compact ? 40 : 66) : (compact ? 34 : 58);
+        const color = followed ? '#0b5cab' : '#128a3a';
+        const shadow = followed
+            ? 'box-shadow:0 0 0 4px #f5c518, 0 4px 10px rgba(0,0,0,.5);'
+            : 'box-shadow:0 3px 8px rgba(0,0,0,.45);';
         return L.divIcon({
-            className: 'leaflet-div-icon campus-car-icon',
+            className: 'leaflet-div-icon campus-car-icon' + (followed ? ' campus-car-followed' : ''),
             html: `<div style="width:${width}px;height:${height}px;transform:rotate(${bearing}deg);transform-origin:center center;">
-                <div style="width:${width}px;height:${height}px;background:#128a3a;border-radius:8px;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.45);overflow:hidden;">
+                <div style="width:${width}px;height:${height}px;background:${color};border-radius:8px;border:2px solid #fff;${shadow}overflow:hidden;">
                     <div style="height:${compact ? 7 : 12}px;margin:3px 3px 0;background:#102033;border-radius:3px;"></div>
                     <div style="height:4px;margin-top:${compact ? 4 : 8}px;background:#f5c518;"></div>
                     <div style="height:3px;background:#d23b2e;"></div>
@@ -59,27 +68,37 @@
         const lat = where ? where.lat : Number(shuttle.latitude);
         const lng = where ? where.lng : Number(shuttle.longitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const followed = isFollowed(shuttle);
 
         if (route && route.length > 1) {
             map._drawnRoutes = map._drawnRoutes || {};
+            const style = {
+                color: followed ? '#0b5cab' : '#128a3a',
+                weight: followed ? 6 : 3,
+                opacity: followed ? 0.9 : 0.35
+            };
             if (!map._drawnRoutes[shuttle.id]) {
-                map._drawnRoutes[shuttle.id] = L.polyline(route.map((p) => [Number(p[0]), Number(p[1])]), {
-                    color: '#128a3a',
-                    weight: 3,
-                    opacity: 0.35
-                }).addTo(map);
+                map._drawnRoutes[shuttle.id] = L.polyline(route.map((p) => [Number(p[0]), Number(p[1])]), style).addTo(map);
+            } else {
+                map._drawnRoutes[shuttle.id].setStyle(style);
             }
         }
 
         const key = map._campusId + ':' + shuttle.id;
-        const icon = carIcon(where ? where.bearing : 0);
+        const icon = carIcon(where ? where.bearing : 0, followed);
+        const label = `<b>${shuttle.vehicle_number || 'Shuttle'}</b><br>${shuttle.driver_name || shuttle.driverName || 'Driver'}<br>${shuttle.routeName || 'Campus Express'}${followed ? '<br>Following' : ''}`;
         if (!cars[key]) {
-            cars[key] = L.marker([lat, lng], { icon, zIndexOffset: 600 })
+            cars[key] = L.marker([lat, lng], { icon, zIndexOffset: followed ? 800 : 600 })
                 .addTo(map)
-                .bindPopup(`<b>${shuttle.vehicle_number || 'Shuttle'}</b><br>${shuttle.driver_name || shuttle.driverName || 'Driver'}<br>${shuttle.routeName || 'Campus Express'}`);
+                .bindPopup(label);
+            cars[key].on('click', () => {
+                if (window.CampusLiveMap) window.CampusLiveMap.setFollowed(shuttle.id);
+            });
         } else {
             cars[key].setLatLng([lat, lng]);
             cars[key].setIcon(icon);
+            cars[key].setZIndexOffset(followed ? 800 : 600);
+            cars[key].setPopupContent(label);
         }
     }
 
@@ -215,7 +234,37 @@
         }, onCampus, { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 });
     }
 
-    window.CampusLiveMap = { attach, refresh };
+    function fleetNow() {
+        const now = Date.now();
+        return shuttles.map((shuttle) => {
+            const where = pointOnRoute(shuttle.route, shuttle.startedAt, shuttle.loopMs || 150000, now);
+            return {
+                ...shuttle,
+                latitude: where ? where.lat : Number(shuttle.latitude),
+                longitude: where ? where.lng : Number(shuttle.longitude)
+            };
+        });
+    }
+
+    function setFollowed(id) {
+        followedId = id == null || id === '' ? null : String(id);
+        try {
+            if (followedId) sessionStorage.setItem('ucc_follow_shuttle', followedId);
+            else sessionStorage.removeItem('ucc_follow_shuttle');
+        } catch (error) {}
+        Object.values(maps).forEach((map) => {
+            shuttles.forEach((shuttle) => drawShuttle(map, shuttle));
+        });
+        window.dispatchEvent(new CustomEvent('campus-shuttle-follow', { detail: { id: followedId } }));
+    }
+
+    window.CampusLiveMap = {
+        attach,
+        refresh,
+        setFollowed,
+        getFollowed: () => followedId,
+        getFleet: fleetNow
+    };
 
     function boot() {
         if (typeof L === 'undefined') {

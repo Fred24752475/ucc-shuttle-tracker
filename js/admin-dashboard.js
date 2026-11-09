@@ -522,45 +522,39 @@ async function loadTripAnalytics() {
     const mainContent = document.querySelector('.main-content');
     const existingSection = document.querySelector('.trips-section');
     if (existingSection) existingSection.remove();
-    
+
     const section = document.createElement('section');
     section.className = 'trips-section';
     section.innerHTML = `
         <div class="section-header">
-            <h2>📊 Trip Analytics</h2>
+            <h2>Trip Analytics</h2>
             <button class="btn-primary" onclick="exportAnalytics()">
                 <i class="fas fa-download"></i> Export Data
             </button>
         </div>
-        <div class="filters">
-            <input type="date" id="startDate">
-            <input type="date" id="endDate">
-            <button class="btn-secondary" onclick="applyDateFilter()">Apply</button>
-        </div>
+        <p>Shuttles on the road right now. Students follow a bus. This list is not a booking queue.</p>
         <div class="users-table"><table>
-            <thead><tr><th>When</th><th>Student</th><th>From</th><th>To</th><th>Status</th><th>Fare</th></tr></thead>
-            <tbody id="adminTripsBody"><tr><td colspan="6">Loading trips...</td></tr></tbody>
+            <thead><tr><th>Shuttle</th><th>Driver</th><th>Route</th><th>Status</th></tr></thead>
+            <tbody id="adminTripsBody"><tr><td colspan="4">Loading the live fleet...</td></tr></tbody>
         </table></div>
     `;
     mainContent.appendChild(section);
     const token = localStorage.getItem('ucc_token');
     try {
-        const response = await fetch('/api/admin/trips', { headers: { 'Authorization': `Bearer ${token}` } });
+        const response = await fetch('/api/shuttles/active', { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await response.json();
         const body = document.getElementById('adminTripsBody');
-        const trips = data.trips || [];
-        body.innerHTML = trips.length ? trips.map(trip => `
+        const shuttles = data.shuttles || [];
+        body.innerHTML = shuttles.length ? shuttles.map((shuttle) => `
             <tr>
-                <td>${new Date(trip.created_at).toLocaleString()}</td>
-                <td>${trip.student_name || 'Unknown'}</td>
-                <td>${trip.pickup_location}</td>
-                <td>${trip.destination}</td>
-                <td>${trip.status}</td>
-                <td>GH₵${trip.fare}</td>
+                <td>${shuttle.vehicle_number || 'Shuttle'}</td>
+                <td>${shuttle.driver_name || shuttle.driverName || 'Driver'}</td>
+                <td>${shuttle.routeName || 'Campus Express'}</td>
+                <td>On road</td>
             </tr>
-        `).join('') : '<tr><td colspan="6">No trips yet.</td></tr>';
+        `).join('') : '<tr><td colspan="4">No shuttle is on the road right now.</td></tr>';
     } catch (error) {
-        document.getElementById('adminTripsBody').innerHTML = '<tr><td colspan="6">Could not load trips.</td></tr>';
+        document.getElementById('adminTripsBody').innerHTML = '<tr><td colspan="4">Could not load the live fleet.</td></tr>';
     }
 }
 
@@ -1150,12 +1144,3 @@ function showNotification(message, type = 'info') {
     setTimeout(() => notification.remove(), 3000);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof io !== 'function') return;
-    const socket = io();
-    const refresh = () => {
-        if (document.getElementById('adminTripsBody') && typeof loadTripAnalytics === 'function') loadTripAnalytics();
-    };
-    socket.on('ride:new', refresh);
-    socket.on('ride:update', refresh);
-});

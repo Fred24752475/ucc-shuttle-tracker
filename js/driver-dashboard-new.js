@@ -1792,51 +1792,8 @@ const styleSheet = document.createElement('style');
 styleSheet.textContent = tripProgressStyles;
 document.head.appendChild(styleSheet);
 
-async function loadStudentRides() {
-    const list = document.getElementById('studentRideList');
-    const token = localStorage.getItem('ucc_token');
-    if (!list || !token) return;
-    const response = await fetch('/api/driver/rides', { headers: { Authorization: 'Bearer ' + token } });
-    const data = await response.json().catch(() => ({}));
-    const rides = data.rides || [];
-    list.innerHTML = rides.length ? rides.map((ride) => `
-        <article class="shuttle-item">
-            <div class="shuttle-info">
-                <span class="shuttle-name">${ride.student_name || 'Student'}</span>
-                <span class="shuttle-route">${ride.pickup_location} → ${ride.destination} · ${ride.status}</span>
-            </div>
-            ${ride.status === 'pending'
-                ? `<button type="button" class="btn btn-success" onclick="acceptStudentRide(${ride.id})">Accept</button>`
-                : `<button type="button" class="btn btn-primary" onclick="completeStudentRide(${ride.id})">Done</button>`}
-        </article>
-    `).join('') : '<p>No student is waiting.</p>';
-}
-
-async function acceptStudentRide(id) {
-    const token = localStorage.getItem('ucc_token');
-    const response = await fetch('/api/driver/rides/' + id + '/accept', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
-    const data = await response.json().catch(() => ({}));
-    if (!data.success) return alert(data.message || 'Could not accept that ride');
-    loadStudentRides();
-}
-
-async function completeStudentRide(id) {
-    const token = localStorage.getItem('ucc_token');
-    const response = await fetch('/api/driver/rides/' + id + '/complete', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
-    const data = await response.json().catch(() => ({}));
-    if (!data.success) return alert(data.message || 'Could not finish that ride');
-    loadStudentRides();
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     if (window.CampusLiveMap && document.getElementById('driverHomeMap')) {
         window.CampusLiveMap.attach('driverHomeMap');
-    }
-    loadStudentRides();
-    setInterval(loadStudentRides, 8000);
-    if (typeof io === 'function') {
-        const socket = io();
-        socket.on('ride:new', loadStudentRides);
-        socket.on('ride:update', loadStudentRides);
     }
 });
