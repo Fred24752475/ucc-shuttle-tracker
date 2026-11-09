@@ -438,6 +438,7 @@ app.post('/api/auth/register', async (req, res) => {
         );
         
         const userId = result.rows[0].id;
+        if (role === 'driver') await ensureDriverShuttle(client, userId);
         const token = jwt.sign({ id: userId, email, role }, JWT_SECRET, { expiresIn: '24h' });
         
         res.json({ success: true, token, user: { id: userId, name, email, phone, role } });
@@ -468,6 +469,7 @@ app.post('/api/register', async (req, res) => {
         );
         
         const userId = result.rows[0].id;
+        if (role === 'driver') await ensureDriverShuttle(client, userId);
         const token = jwt.sign({ id: userId, email, role }, JWT_SECRET, { expiresIn: '24h' });
         
         res.json({ success: true, token, user: { id: userId, name, email, phone, role } });
@@ -2196,6 +2198,7 @@ app.post('/api/admin/add-user', authenticateToken, requireRole(['admin']), async
             'INSERT INTO users (name, email, phone, password, role, is_verified) VALUES ($1, $2, $3, $4, $5, true) RETURNING id, name, email, role',
             [name, email, phone || null, hashed, role]
         );
+        if (role === 'driver') await ensureDriverShuttle(client, result.rows[0].id);
         res.json({ success: true, user: result.rows[0] });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Could not add user' });
