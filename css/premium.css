@@ -761,6 +761,7 @@ input:focus, select:focus, textarea:focus {
 .nav-item[data-section="help"],
 .nav-item[data-section="support"] { display: none !important; }
 .me-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 8px 8px 0; }
+.me-bar.me-bar-home { grid-template-columns: 44px 44px 1fr 44px; }
 .me-bar h2 { margin: 0; text-align: center; font-size: 18px; font-weight: 700; }
 .me-icon, .me-save { border: 0; background: transparent; font-size: 28px; line-height: 1; cursor: pointer; color: #111; }
 .me-save { color: #128a3a; font-weight: 700; }
@@ -921,7 +922,7 @@ input:focus, select:focus, textarea:focus {
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
-        z-index: 50 !important;
+        z-index: 40 !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
@@ -1138,6 +1139,21 @@ input:focus, select:focus, textarea:focus {
 
 @media (min-width: 901px) {
     .bottom-nav { display: none !important; }
+    aside#sidebar.sidebar.collapsed {
+        transform: translateX(-105%) !important;
+    }
+    aside#sidebar.sidebar.collapsed ~ .main-content {
+        margin-left: 0 !important;
+    }
+    .sidebar.collapsed ~ .main-content .phone-menu {
+        display: inline-flex !important;
+    }
+    main.profile-section {
+        position: relative !important;
+        inset: auto !important;
+        width: auto !important;
+        z-index: 1 !important;
+    }
 }
 
 #dashboardMain .quick-actions-section { margin-bottom: 16px !important; }
