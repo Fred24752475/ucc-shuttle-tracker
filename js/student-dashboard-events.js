@@ -250,6 +250,12 @@ function navigateToSection(section) {
         case 'messages':
             showMessages();
             break;
+        case 'report':
+            showReport();
+            break;
+        case 'rate':
+            showRate();
+            break;
         case 'help':
             showHelp();
             break;
@@ -325,6 +331,21 @@ function showMessages() {
     console.log('💬 Showing messages');
 }
 
+function showReport() {
+    hideAllSections();
+    const reportSection = document.getElementById('reportSection');
+    if (reportSection) reportSection.style.display = 'block';
+}
+
+function showRate() {
+    hideAllSections();
+    const rateSection = document.getElementById('rateSection');
+    if (rateSection) {
+        rateSection.style.display = 'block';
+        if (window.Feedback) window.Feedback.loadDrivers();
+    }
+}
+
 function showHelp() {
     hideAllSections();
     const helpSection = document.getElementById('helpSection');
@@ -342,6 +363,8 @@ function hideAllSections() {
         'historySection',
         'aiAssistantSection',
         'messagesSection',
+        'reportSection',
+        'rateSection',
         'helpSection'
     ];
 

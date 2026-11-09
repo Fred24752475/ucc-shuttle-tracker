@@ -246,7 +246,7 @@ function navigateToSection(section) {
     console.log('🔄 Navigating to section:', section);
     
     // Hide all sections
-    const sections = ['homeSection', 'viewMapSection', 'startTripSection', 'activeRouteSection', 'completedTripsSection', 'notificationsSection', 'supportSection', 'profileSection', 'messagesSection'];
+    const sections = ['homeSection', 'viewMapSection', 'startTripSection', 'activeRouteSection', 'completedTripsSection', 'notificationsSection', 'supportSection', 'profileSection', 'messagesSection', 'reportSection'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -274,7 +274,8 @@ function navigateToSection(section) {
         'notifications': 'notificationsSection',
         'support': 'supportSection',
         'profile': 'profileSection',
-        'messages': 'messagesSection'
+        'messages': 'messagesSection',
+        'report': 'reportSection'
     };
 
     const targetSectionId = sectionMap[section];

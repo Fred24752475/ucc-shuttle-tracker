@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'ai-assistant': document.getElementById('aiAssistantSection'),
         'history': document.getElementById('historySection'),
         'help': document.getElementById('helpSection'),
+        'report': document.getElementById('reportSection'),
+        'rate': document.getElementById('rateSection'),
         'profile': document.getElementById('profileSection')
     };
 

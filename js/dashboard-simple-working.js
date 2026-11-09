@@ -100,12 +100,14 @@ window.StudentDashboardSimple = {
             'history': 'historySection',
             'ai-assistant': 'aiAssistantSection',
             'messages': 'messagesSection',
+            'report': 'reportSection',
+            'rate': 'rateSection',
             'help': 'helpSection',
             'profile': 'profileSection'
         };
         
         // Hide all sections
-        ['dashboardMain', 'ridesSection', 'mapSection', 'historySection', 'aiAssistantSection', 'messagesSection', 'helpSection', 'profileSection'].forEach(sectionId => {
+        ['dashboardMain', 'ridesSection', 'mapSection', 'historySection', 'aiAssistantSection', 'messagesSection', 'reportSection', 'rateSection', 'helpSection', 'profileSection'].forEach(sectionId => {
             const element = document.getElementById(sectionId);
             if (element) {
                 element.style.display = 'none';
@@ -121,6 +123,9 @@ window.StudentDashboardSimple = {
         }
         if (section === 'messages' && window.friendsSystem) {
             setTimeout(() => window.friendsSystem.init(), 60);
+        }
+        if (section === 'rate' && window.Feedback) {
+            window.Feedback.loadDrivers();
         }
         if (section === 'map' && window.CampusLiveMap) {
             setTimeout(() => window.CampusLiveMap.attach('studentShuttleMap'), 120);

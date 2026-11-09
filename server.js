@@ -107,6 +107,22 @@ const io = socketIo(server, {
             used BOOLEAN DEFAULT false,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS problem_reports (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            description TEXT NOT NULL,
+            seen BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS driver_ratings (
+            id SERIAL PRIMARY KEY,
+            student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            driver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            stars INTEGER NOT NULL CHECK (stars >= 1 AND stars <= 5),
+            note TEXT,
+            seen BOOLEAN DEFAULT false,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
         console.log('Database connected');
         startDemoFleet();
         console.log('Campus buses running:', demoFleet.size);
@@ -164,6 +180,26 @@ function emitTo(userId, event, payload) {
     io.to(`user:${userId}`).emit(event, payload);
 }
 
+async function unseenFeedbackCount() {
+    const result = await pool.query(`
+        SELECT
+            (SELECT COUNT(*)::int FROM problem_reports WHERE seen = false) AS reports,
+            (SELECT COUNT(*)::int FROM driver_ratings WHERE seen = false) AS ratings
+    `);
+    const reports = result.rows[0].reports;
+    const ratings = result.rows[0].ratings;
+    return { reports, ratings, unseen: reports + ratings };
+}
+
+async function notifyFeedbackUpdate() {
+    try {
+        const counts = await unseenFeedbackCount();
+        io.to('admins').emit('feedback:update', counts);
+    } catch (error) {
+        console.error('Could not refresh the admin feedback badge');
+    }
+}
+
 io.use((socket, next) => {
     try {
         const token = socket.handshake.auth && socket.handshake.auth.token;
@@ -179,6 +215,7 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     const userId = Number(socket.userId);
     socket.join(`user:${userId}`);
+    if (socket.userRole === 'admin') socket.join('admins');
     if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
     onlineUsers.get(userId).add(socket.id);
     io.emit('chat:presence', { userId, online: true });
@@ -2400,6 +2437,120 @@ app.post('/api/admin/settings', authenticateToken, requireRole(['admin']), async
     }
 });
 
+app.post('/api/reports', authenticateToken, requireRole(['student', 'driver']), async (req, res) => {
+    const description = String(req.body.description || '').trim();
+    if (description.length < 8) {
+        return res.status(400).json({ success: false, message: 'Describe the problem in a sentence or two.' });
+    }
+    if (description.length > 1000) {
+        return res.status(400).json({ success: false, message: 'That report is too long. Keep it under 1000 characters.' });
+    }
+    try {
+        await pool.query(
+            'INSERT INTO problem_reports (user_id, description) VALUES ($1, $2)',
+            [req.user.id, description]
+        );
+        await notifyFeedbackUpdate();
+        res.json({ success: true, message: 'Thanks. Your report was sent.' });
+    } catch (error) {
+        console.error('Could not save a problem report');
+        res.status(500).json({ success: false, message: 'Could not send that report. Try again.' });
+    }
+});
+
+app.get('/api/ratings/drivers', authenticateToken, requireRole(['student']), async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, name FROM users WHERE role = 'driver' ORDER BY name ASC`
+        );
+        res.json({ success: true, drivers: result.rows });
+    } catch (error) {
+        console.error('Could not list drivers for ratings');
+        res.status(500).json({ success: false, message: 'Could not load the drivers. Try again.' });
+    }
+});
+
+app.post('/api/ratings', authenticateToken, requireRole(['student']), async (req, res) => {
+    const driverId = Number(req.body.driverId);
+    const stars = Number(req.body.stars);
+    const note = String(req.body.note || '').trim();
+    if (!Number.isInteger(driverId) || driverId < 1) {
+        return res.status(400).json({ success: false, message: 'Choose a driver.' });
+    }
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+        return res.status(400).json({ success: false, message: 'Choose a satisfaction rating from 1 to 5.' });
+    }
+    if (note.length > 200) {
+        return res.status(400).json({ success: false, message: 'Keep the note short, under 200 characters.' });
+    }
+    try {
+        const driver = await pool.query(
+            `SELECT id FROM users WHERE id = $1 AND role = 'driver'`,
+            [driverId]
+        );
+        if (!driver.rows[0]) {
+            return res.status(400).json({ success: false, message: 'Choose a driver from the list.' });
+        }
+        await pool.query(
+            `INSERT INTO driver_ratings (student_id, driver_id, stars, note) VALUES ($1, $2, $3, $4)`,
+            [req.user.id, driverId, stars, note || null]
+        );
+        await notifyFeedbackUpdate();
+        res.json({ success: true, message: 'Thanks. Your rating was saved.' });
+    } catch (error) {
+        console.error('Could not save a driver rating');
+        res.status(500).json({ success: false, message: 'Could not save that rating. Try again.' });
+    }
+});
+
+app.get('/api/admin/feedback/unseen', authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+        const counts = await unseenFeedbackCount();
+        res.json({ success: true, ...counts });
+    } catch (error) {
+        console.error('Could not count unseen feedback');
+        res.status(500).json({ success: false, message: 'Could not load new reports. Try again.' });
+    }
+});
+
+app.get('/api/admin/feedback', authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+        const reports = await pool.query(`
+            SELECT r.id, r.description, r.seen, r.created_at, u.name AS user_name, u.role AS user_role
+            FROM problem_reports r
+            JOIN users u ON u.id = r.user_id
+            ORDER BY r.created_at DESC
+            LIMIT 200
+        `);
+        const ratings = await pool.query(`
+            SELECT r.id, r.stars, r.note, r.seen, r.created_at,
+                   s.name AS student_name, d.name AS driver_name
+            FROM driver_ratings r
+            JOIN users s ON s.id = r.student_id
+            JOIN users d ON d.id = r.driver_id
+            ORDER BY r.created_at DESC
+            LIMIT 200
+        `);
+        res.json({ success: true, reports: reports.rows, ratings: ratings.rows });
+    } catch (error) {
+        console.error('Could not list feedback');
+        res.status(500).json({ success: false, message: 'Could not load reports and ratings. Try again.' });
+    }
+});
+
+app.post('/api/admin/feedback/seen', authenticateToken, requireRole(['admin']), async (req, res) => {
+    try {
+        await pool.query('UPDATE problem_reports SET seen = true WHERE seen = false');
+        await pool.query('UPDATE driver_ratings SET seen = true WHERE seen = false');
+        const counts = await unseenFeedbackCount();
+        io.to('admins').emit('feedback:update', counts);
+        res.json({ success: true, ...counts });
+    } catch (error) {
+        console.error('Could not mark feedback seen');
+        res.status(500).json({ success: false, message: 'Could not update the new items. Try again.' });
+    }
+});
+
 app.post('/api/ai/chat', authenticateToken, async (req, res) => {
     const message = String(req.body.message || '').trim().slice(0, 1000);
     if (!message) return res.status(400).json({ success: false, message: 'Type a message first.' });
@@ -2427,8 +2578,9 @@ app.post('/api/ai/chat', authenticateToken, async (req, res) => {
             'A student can message another student only after that person accepts a friend request. A student can message a driver directly. Admins are not in chat.',
             'Student and driver profiles have a photo, personal details, a password change, and logout. There is no Google sign-in. If no photo is saved, the app shows the default user picture.',
             'The dashboards are student, driver, and admin. Help and support dashboards were removed. The assistant is in the student drawer.',
-            'Drivers have a live campus map and can start or stop their route. They do not accept bookings. They can reply to students and update their profile.',
-            'Admins see users, the fleet, drivers, a live tracking map, and reports. There is no booking queue.',
+            'Drivers have a live campus map and can start or stop their route. They do not accept bookings. They can reply to students, update their profile, and report a problem from Report a problem in the driver drawer.',
+            'Students can report a problem from Report a problem in the student drawer. Students can rate a driver from Rate a driver: they pick a driver, set satisfaction from 1 to 5 stars, and may add a short note.',
+            'Admins see users, the fleet, drivers, a live tracking map, system reports, and Reports and ratings. A badge on Reports and ratings shows unseen problem reports and driver ratings. There is no booking queue.',
             'If someone asks the fare, say it is GH₵2. Do not tell them to book.',
             'Signup and password reset use a 6-digit code sent by email. Login is email and password. Do not invent a password or a code.',
             'The emergency button on the student dashboard sends an alert. Do not invent a phone number for it.',

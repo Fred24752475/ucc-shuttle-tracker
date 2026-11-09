@@ -31,6 +31,7 @@ async function loadUserData() {
 async function initializeSocket() {
     const token = localStorage.getItem('ucc_token');
     if (!token) return;
+    refreshFeedbackBadge();
 
     try {
         socket = io('', {
@@ -40,6 +41,15 @@ async function initializeSocket() {
 
         socket.on('connect', () => console.log('✅ Admin connected to server'));
         socket.on('shuttle_location_update', (data) => updateShuttleMarker(data));
+        socket.on('feedback:update', (data) => {
+            const unseen = data && Number(data.unseen) || 0;
+            const open = document.querySelector('.feedback-section');
+            if (open && open.style.display !== 'none' && unseen > 0) {
+                loadFeedback();
+                return;
+            }
+            setFeedbackBadge(unseen);
+        });
     } catch (error) {
         console.error('❌ Socket error:', error);
     }
@@ -91,7 +101,7 @@ function handleNavClick(section, event) {
     event.currentTarget.parentElement.classList.add('active');
     
     // Hide all sections
-    document.querySelectorAll('.dashboard-content, .users-section, .shuttles-section, .drivers-section, .trips-section, .reports-section, .settings-section').forEach(el => {
+    document.querySelectorAll('.dashboard-content, .users-section, .shuttles-section, .drivers-section, .trips-section, .reports-section, .feedback-section, .tracking-section, .settings-section').forEach(el => {
         el.style.display = 'none';
     });
     
@@ -114,6 +124,9 @@ function handleNavClick(section, event) {
             break;
         case 'reports':
             loadReports();
+            break;
+        case 'feedback':
+            loadFeedback();
             break;
         case 'tracking':
             loadLiveTracking();
@@ -621,6 +634,122 @@ function exportAnalytics() {
     a.download = 'analytics.csv';
     a.click();
     showNotification('Analytics exported', 'success');
+}
+
+function setFeedbackBadge(count) {
+    const badge = document.getElementById('feedbackBadge');
+    if (!badge) return;
+    const total = Number(count) || 0;
+    badge.textContent = String(total);
+    badge.style.display = total > 0 ? 'inline-block' : 'none';
+}
+
+async function refreshFeedbackBadge() {
+    const token = localStorage.getItem('ucc_token');
+    if (!token) return;
+    try {
+        const response = await fetch('/api/admin/feedback/unseen', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) setFeedbackBadge(data.unseen);
+    } catch (error) {
+        console.error('Could not load the feedback badge');
+    }
+}
+
+function feedbackEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function feedbackWhen(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString();
+}
+
+async function loadFeedback() {
+    const mainContent = document.querySelector('.main-content');
+    const existingSection = document.querySelector('.feedback-section');
+    if (existingSection) existingSection.remove();
+
+    const section = document.createElement('section');
+    section.className = 'feedback-section';
+    section.innerHTML = `
+        <div class="section-header">
+            <h2>Reports and ratings</h2>
+        </div>
+        <p class="feedback-lead">Problem reports and driver satisfaction ratings from students and drivers.</p>
+        <div id="feedbackLists"><p>Loading reports and ratings.</p></div>
+    `;
+    mainContent.appendChild(section);
+
+    const token = localStorage.getItem('ucc_token');
+    const lists = document.getElementById('feedbackLists');
+    try {
+        const response = await fetch('/api/admin/feedback', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            lists.innerHTML = `<p class="feedback-error">${feedbackEscape(data.message || 'Could not load reports and ratings. Try again.')}</p>`;
+            return;
+        }
+        const reports = data.reports || [];
+        const ratings = data.ratings || [];
+        const reportRows = reports.length
+            ? reports.map((item) => `
+                <tr>
+                    <td>${feedbackEscape(feedbackWhen(item.created_at))}</td>
+                    <td>${feedbackEscape(item.user_name)} <span class="badge">${feedbackEscape(item.user_role)}</span></td>
+                    <td>${feedbackEscape(item.description)}</td>
+                    <td>${item.seen ? '' : '<span class="badge">New</span>'}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="4">No problem reports yet.</td></tr>';
+        const ratingRows = ratings.length
+            ? ratings.map((item) => `
+                <tr>
+                    <td>${feedbackEscape(feedbackWhen(item.created_at))}</td>
+                    <td>${feedbackEscape(item.student_name)}</td>
+                    <td>${feedbackEscape(item.driver_name)}</td>
+                    <td>${feedbackEscape(item.stars)} / 5</td>
+                    <td>${feedbackEscape(item.note || '')}</td>
+                    <td>${item.seen ? '' : '<span class="badge">New</span>'}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="6">No ratings yet.</td></tr>';
+        lists.innerHTML = `
+            <h3>Problem reports</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>When</th><th>From</th><th>Problem</th><th></th></tr></thead>
+                    <tbody>${reportRows}</tbody>
+                </table>
+            </div>
+            <h3>Satisfaction ratings</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>When</th><th>Student</th><th>Driver</th><th>Satisfaction</th><th>Note</th><th></th></tr></thead>
+                    <tbody>${ratingRows}</tbody>
+                </table>
+            </div>
+        `;
+        const seen = await fetch('/api/admin/feedback/seen', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const seenData = await seen.json();
+        if (seenData.success) setFeedbackBadge(seenData.unseen);
+    } catch (error) {
+        if (lists) lists.innerHTML = '<p class="feedback-error">Could not load reports and ratings. Try again.</p>';
+    }
 }
 
 // 6. REPORTS
