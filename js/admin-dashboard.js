@@ -1160,3 +1160,13 @@ function showNotification(message, type = 'info') {
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof io !== 'function') return;
+    const socket = io();
+    const refresh = () => {
+        if (document.getElementById('adminTripsBody') && typeof loadTripAnalytics === 'function') loadTripAnalytics();
+    };
+    socket.on('ride:new', refresh);
+    socket.on('ride:update', refresh);
+});

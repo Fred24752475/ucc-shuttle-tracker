@@ -553,8 +553,14 @@ window.showHelp = function () {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function () {
-    // Load initial dashboard data
     loadDashboardData();
+    if (typeof io === 'function') {
+        const socket = io();
+        socket.on('ride:update', () => {
+            if (typeof loadRidesData === 'function') loadRidesData();
+            if (typeof loadRidesForTab === 'function') loadRidesForTab('upcoming');
+        });
+    }
 
     console.log('✅ Dashboard data loader initialized');
 });

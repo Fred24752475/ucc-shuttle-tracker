@@ -1790,23 +1790,88 @@ app.post('/api/rides/book', authenticateToken, async (req, res) => {
         if (pickup === destination) {
             return res.status(400).json({ success: false, message: 'Pick a different destination' });
         }
-        const driver = await client.query(`SELECT id FROM users WHERE role = 'driver' ORDER BY id LIMIT 1`);
-        const shuttle = await client.query(`SELECT id FROM shuttles ORDER BY id LIMIT 1`);
         const result = await client.query(
             `INSERT INTO trips (student_id, driver_id, shuttle_id, pickup_location, destination, fare, status)
-             VALUES ($1, $2, $3, $4, $5, $6, 'confirmed') RETURNING *`,
-            [req.user.id, driver.rows[0]?.id || null, shuttle.rows[0]?.id || null, pickup, destination, 2]
+             VALUES ($1, NULL, NULL, $2, $3, 2, 'pending') RETURNING *`,
+            [req.user.id, pickup, destination]
         );
-        const full = await client.query(`
-            SELECT t.*, u.name AS driver_name, s.vehicle_number AS shuttle_number
-            FROM trips t
-            LEFT JOIN users u ON u.id = t.driver_id
-            LEFT JOIN shuttles s ON s.id = t.shuttle_id
-            WHERE t.id = $1
-        `, [result.rows[0].id]);
-        res.json({ success: true, ride: full.rows[0], message: 'Ride booked' });
+        const full = await rideWithNames(client, result.rows[0].id);
+        io.emit('ride:new', full);
+        res.json({ success: true, ride: full, message: 'Ride booked. A driver will pick it up.' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Could not book ride' });
+    } finally {
+        client.release();
+    }
+});
+
+async function rideWithNames(client, id) {
+    const full = await client.query(`
+        SELECT t.*, su.name AS student_name, du.name AS driver_name, s.vehicle_number AS shuttle_number
+        FROM trips t
+        LEFT JOIN users su ON su.id = t.student_id
+        LEFT JOIN users du ON du.id = t.driver_id
+        LEFT JOIN shuttles s ON s.id = t.shuttle_id
+        WHERE t.id = $1
+    `, [id]);
+    return full.rows[0];
+}
+
+app.get('/api/driver/rides', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(`
+            SELECT t.*, su.name AS student_name, s.vehicle_number AS shuttle_number
+            FROM trips t
+            JOIN users su ON su.id = t.student_id
+            LEFT JOIN shuttles s ON s.id = t.shuttle_id
+            WHERE t.status IN ('pending', 'confirmed')
+              AND (t.driver_id IS NULL OR t.driver_id = $1)
+              AND su.role = 'student'
+            ORDER BY t.created_at DESC
+        `, [req.user.id]);
+        res.json({ success: true, rides: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not load student rides' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/driver/rides/:id/accept', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const shuttle = await ensureDriverShuttle(client, req.user.id);
+        const updated = await client.query(`
+            UPDATE trips SET driver_id = $1, shuttle_id = $2, status = 'confirmed'
+            WHERE id = $3 AND status = 'pending' AND (driver_id IS NULL OR driver_id = $1)
+            RETURNING id
+        `, [req.user.id, shuttle.id, req.params.id]);
+        if (!updated.rows[0]) return res.status(404).json({ success: false, message: 'That ride is no longer waiting' });
+        const ride = await rideWithNames(client, updated.rows[0].id);
+        io.emit('ride:update', ride);
+        res.json({ success: true, ride });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not accept the ride' });
+    } finally {
+        client.release();
+    }
+});
+
+app.post('/api/driver/rides/:id/complete', authenticateToken, requireRole(['driver']), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const updated = await client.query(`
+            UPDATE trips SET status = 'completed'
+            WHERE id = $1 AND driver_id = $2 AND status = 'confirmed'
+            RETURNING id
+        `, [req.params.id, req.user.id]);
+        if (!updated.rows[0]) return res.status(404).json({ success: false, message: 'That ride is not yours to finish' });
+        const ride = await rideWithNames(client, updated.rows[0].id);
+        io.emit('ride:update', ride);
+        res.json({ success: true, ride });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not finish the ride' });
     } finally {
         client.release();
     }
@@ -1820,7 +1885,9 @@ app.delete('/api/rides/:id', authenticateToken, async (req, res) => {
             [req.params.id, req.user.id]
         );
         if (!result.rows[0]) return res.status(404).json({ success: false, message: 'Ride not found' });
-        res.json({ success: true, ride: result.rows[0] });
+        const ride = await rideWithNames(client, result.rows[0].id);
+        io.emit('ride:update', ride);
+        res.json({ success: true, ride });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Something went wrong. Try again in a moment.' });
     } finally {
@@ -1959,16 +2026,9 @@ app.post('/api/driver/start-route', authenticateToken, requireRole(['driver']), 
         await client.query('UPDATE shuttles SET status = $1 WHERE id = $2', ['active', shuttle.id]);
         const named = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
         const drive = beginCampusDrive(req.user.id, shuttle, named.rows[0]?.name);
-        const trip = await client.query(
-            `INSERT INTO trips (student_id, driver_id, shuttle_id, pickup_location, destination, fare, status)
-             VALUES ($1, $1, $2, $3, 'Campus loop', 0, 'active') RETURNING id`,
-            [req.user.id, shuttle.id, drive.routeName]
-        );
-        const current = activeDrivers.get(req.user.id);
-        if (current) activeDrivers.set(req.user.id, { ...current, tripId: trip.rows[0].id });
         res.json({
             success: true,
-            tripId: trip.rows[0].id,
+            tripId: null,
             stops_count: drive.stops.length,
             shuttle,
             startedAt: drive.startedAt,
