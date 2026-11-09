@@ -1,8 +1,15 @@
 (function () {
     const history = [];
+    const greeting = "Hey there! 👋 I'm your UCC 🚌 shuttle buddy. What's going on today?";
 
     function box() {
         return document.getElementById('aiMessages');
+    }
+
+    function showGreeting() {
+        const list = box();
+        if (!list || list.textContent.indexOf('shuttle buddy') !== -1) return;
+        addLine(greeting, false);
     }
 
     function addLine(text, mine) {
@@ -68,6 +75,7 @@
                 }
             });
         }
+        showGreeting();
         window.sendSimpleAI = ask;
         window.sendQuickMessage = function (message) {
             if (input) input.value = message;

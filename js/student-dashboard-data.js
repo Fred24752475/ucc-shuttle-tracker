@@ -448,113 +448,50 @@ async function sendAIQuery(message) {
     await new Promise(resolve => setTimeout(resolve, 800));
     
     const lowerMessage = message.toLowerCase();
+    const greeting = "Hey there! 👋 I'm your UCC 🚌 shuttle buddy. What's going on today?";
     let response = '';
     
-    // Greetings
     if (lowerMessage.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
-        const greetings = [
-            "Hi there! 👋 How can I assist you with the UCC shuttle service today?",
-            "Hello! Ready to help you get around campus. What do you need?",
-            "Hey! 🚀 Looking for a shuttle? I'm here to help!",
-            "Good day! What can I do for you today?"
-        ];
-        response = greetings[Math.floor(Math.random() * greetings.length)];
+        response = greeting;
     }
-    // Library
-    else if (lowerMessage.includes('library')) {
-        const libraryResponses = [
-            `📚 The Library Shuttle is running smoothly! Next one arrives in about ${Math.floor(Math.random() * 8) + 2} minutes. It departs every 10 minutes from Main Campus.`,
-            `🚌 Heading to the library? Perfect timing! A shuttle will be there in ${Math.floor(Math.random() * 8) + 2} minutes. They run every 10 minutes.`,
-            `📖 Library shuttle coming up! ETA: ${Math.floor(Math.random() * 8) + 2} minutes. Regular service every 10 minutes from Main Campus.`
-        ];
-        response = libraryResponses[Math.floor(Math.random() * libraryResponses.length)];
-    }
-    // Hostel
-    else if (lowerMessage.includes('hostel')) {
-        const hostelResponses = [
-            `🏠 Hostel shuttles serve both Hostel A and B every 20 minutes. Next one in about ${Math.floor(Math.random() * 12) + 5} minutes!`,
-            `🛌 Going to the hostels? The shuttle runs every 20 minutes. Current wait time: ${Math.floor(Math.random() * 12) + 5} minutes.`,
-            `🏘️ Hostel service is active! Both A and B are covered. Next shuttle arrives in ${Math.floor(Math.random() * 12) + 5} minutes.`
-        ];
-        response = hostelResponses[Math.floor(Math.random() * hostelResponses.length)];
-    }
-    // Science
-    else if (lowerMessage.includes('science')) {
-        const scienceResponses = [
-            `🔬 Science Block Shuttle operates every 15 minutes during class hours. Next arrival: ${Math.floor(Math.random() * 10) + 3} minutes.`,
-            `🧪 Heading to Science Block? Shuttle comes every 15 minutes. You'll catch one in about ${Math.floor(Math.random() * 10) + 3} minutes!`,
-            `🔬 Science shuttle is on schedule! Running every 15 minutes. ETA: ${Math.floor(Math.random() * 10) + 3} minutes.`
-        ];
-        response = scienceResponses[Math.floor(Math.random() * scienceResponses.length)];
-    }
-    // Delays
-    else if (lowerMessage.includes('delay') || lowerMessage.includes('late')) {
-        const delayResponses = [
-            "✅ Good news! No delays reported right now. All shuttles are running on time.",
-            "🚀 Everything's on schedule! No delays at the moment. Would you like me to notify you if anything changes?",
-            "✅ All clear! Shuttles are running smoothly with no delays reported."
-        ];
-        response = delayResponses[Math.floor(Math.random() * delayResponses.length)];
-    }
-    // Booking
-    else if (lowerMessage.includes('book') || lowerMessage.includes('request') || lowerMessage.includes('ride') || lowerMessage.includes('stop') || lowerMessage.includes('follow')) {
-        response = "Save My stop, then tap a bus in the shuttle list. Every bus stays on the map, and a banner appears when one is about 5 minutes from your stop.";
-    }
-    // Emergency
-    else if (lowerMessage.includes('emergency')) {
-        const emergencyResponses = [
-            "🚨 For emergencies, use the Emergency Alert button immediately! You can also call campus security at +233-XXX-XXXX. Your safety is our top priority!",
-            "⚠️ Emergency? Press the Emergency Alert button right away or call +233-XXX-XXXX. We're here to help!",
-            "🚨 Safety first! Use the Emergency Alert button for immediate help, or contact campus security at +233-XXX-XXXX."
-        ];
-        response = emergencyResponses[Math.floor(Math.random() * emergencyResponses.length)];
-    }
-    // Schedule
-    else if (lowerMessage.includes('time') || lowerMessage.includes('schedule') || lowerMessage.includes('hours')) {
-        const scheduleResponses = [
-            "⏰ Peak hours (7am-7pm): Shuttles every 10-15 minutes. Off-peak: Every 20-30 minutes. Real-time tracking on your dashboard!",
-            "📅 Service hours: 7am-7pm with frequent shuttles (10-15 min). After hours: 20-30 min intervals. Check your dashboard for live updates!",
-            "⏰ We run all day! Peak times: 10-15 min frequency. Quieter times: 20-30 min. Track shuttles in real-time on your dashboard."
-        ];
-        response = scheduleResponses[Math.floor(Math.random() * scheduleResponses.length)];
-    }
-    // Contact
-    else if (lowerMessage.includes('contact') || lowerMessage.includes('help') || lowerMessage.includes('support')) {
-        const contactResponses = [
-            "📞 Need more help? Contact UCC Shuttle Support:\n📱 Hotline: +233-302-XXXX\n📧 Email: shuttle@ucc.edu.gh\n🏢 Office: Student Center, Room 101\n🕐 Hours: 6am-10pm daily",
-            "👋 Here's how to reach us:\n📞 Hotline: +233-302-XXXX\n✉️ Email: shuttle@ucc.edu.gh\n🏛️ Office: Student Center, Room 101\nOpen 6am-10pm every day!",
-            "📲 Get in touch with our team:\n📞 Call: +233-302-XXXX\n📧 Email: shuttle@ucc.edu.gh\n🏢 Visit: Student Center, Room 101 (6am-10pm)"
-        ];
-        response = contactResponses[Math.floor(Math.random() * contactResponses.length)];
-    }
-    // Cost/Fare
     else if (lowerMessage.includes('cost') || lowerMessage.includes('fare') || lowerMessage.includes('price') || lowerMessage.includes('pay')) {
-        const fareResponses = [
-            "💰 Current fares:\n• Regular routes: ₵5.00\n• Long-distance: ₵8.00\n• Special events: ₵10.00\nWe accept Cash, Mobile Money, and UCC ID Card!",
-            "💳 Pricing:\n🚌 Regular: ₵5.00\n🚌 Long routes: ₵8.00\n🎉 Events: ₵10.00\nPayment: Cash, MoMo, or UCC ID!",
-            "💵 Here's what it costs:\n• Campus routes: ₵5.00\n• Longer trips: ₵8.00\n• Special occasions: ₵10.00\nPay with Cash, Mobile Money, or your UCC ID Card."
-        ];
-        response = fareResponses[Math.floor(Math.random() * fareResponses.length)];
+        response = "The fare is GH₵2. You do not book a ride in this app. Save My stop and follow a bus on the map.";
     }
-    // Thanks
+    else if (lowerMessage.includes('message') || lowerMessage.includes('chat') || lowerMessage.includes('friend')) {
+        response = "You can message another student after they accept your friend request. You can message a driver directly. Admins are not in chat.";
+    }
+    else if (lowerMessage.includes('profile') || lowerMessage.includes('photo') || lowerMessage.includes('password') || lowerMessage.includes('login') || lowerMessage.includes('code')) {
+        response = "Login is your email and password. Signup and password reset use a 6-digit code from email. Your profile has your photo, details, password, and logout. There is no Google sign-in. If you have no photo, the default picture is used.";
+    }
+    else if (lowerMessage.includes('book') || lowerMessage.includes('request') || lowerMessage.includes('ride')) {
+        response = "Students do not book rides in this app. Open My stop and choose West Gate, East Gate, Administration, Science, Library, Hospital, or Halls. Then tap a bus in the shuttle list to follow it.";
+    }
+    else if (lowerMessage.includes('library') || lowerMessage.includes('science') || lowerMessage.includes('hospital') || lowerMessage.includes('hall') || lowerMessage.includes('gate') || lowerMessage.includes('stop')) {
+        response = "Those are My stop choices: West Gate, East Gate, Administration, Science, Library, Hospital, and Halls. Open My stop to save one. A banner appears on the screen once when a bus is about 5 minutes away. It is not a phone alert.";
+    }
+    else if (lowerMessage.includes('follow') || lowerMessage.includes('where') || lowerMessage.includes('map') || lowerMessage.includes('shuttle') || lowerMessage.includes('bus')) {
+        response = "Open the shuttle list or the map. Live UCC-BRT buses move on the campus loop. Tap a bus to follow it. Every bus stays on the map, and the one you pick is highlighted.";
+    }
+    else if (lowerMessage.includes('banner') || lowerMessage.includes('minute') || lowerMessage.includes('delay') || lowerMessage.includes('late') || lowerMessage.includes('time') || lowerMessage.includes('schedule')) {
+        response = "There is no timetable to book. Buses move on the campus loop. A banner appears on the screen once when a bus is about 5 minutes from your saved stop.";
+    }
+    else if (lowerMessage.includes('emergency')) {
+        response = "Use the Emergency Alert button on the student dashboard. That sends an alert from the app.";
+    }
+    else if (lowerMessage.includes('driver')) {
+        response = "Drivers have a live campus map and can start or stop their route. They do not accept bookings. You can message a driver directly.";
+    }
+    else if (lowerMessage.includes('admin')) {
+        response = "Admins see users, the fleet, drivers, a live tracking map, and reports. They are not in chat, and there is no booking queue.";
+    }
+    else if (lowerMessage.includes('contact') || lowerMessage.includes('help') || lowerMessage.includes('support')) {
+        response = "Help and support dashboards were removed. I can explain My stop, following a bus, the 5 minute banner, messages, and your profile.";
+    }
     else if (lowerMessage.match(/(thank|thanks|appreciate)/)) {
-        const thanksResponses = [
-            "You're welcome! 😊 Happy to help. Safe travels!",
-            "Anytime! 👍 Have a great trip!",
-            "My pleasure! ✨ Enjoy your ride!",
-            "Glad I could help! 🚀 See you around campus!"
-        ];
-        response = thanksResponses[Math.floor(Math.random() * thanksResponses.length)];
+        response = "You're welcome.";
     }
-    // Default
     else {
-        const defaultResponses = [
-            "I can help with shuttle times, your saved stop, following a bus, delays, and emergencies. What would you like to know?",
-            "Ask me about the live shuttles, where to wait, or how the 5 minute banner works.",
-            "I can help you follow a shuttle and save West Gate, East Gate, Administration, Science, Library, Hospital, or Halls.",
-            "Tell me which stop you are waiting at, or ask where the shuttles are."
-        ];
-        response = defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+        response = "I only know this shuttle app. Save a stop, follow a bus on the map, and message students after they accept a friend request, or message a driver directly.";
     }
     
     return {
