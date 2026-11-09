@@ -757,9 +757,7 @@ input:focus, select:focus, textarea:focus {
 
 .profile-section { background: #fff !important; padding: 0 !important; margin: 0 !important; }
 .me-pane { background: #fff; margin: 0; }
-#aiAssistantSection,
 #helpSection,
-.nav-item[data-section="ai-assistant"],
 .nav-item[data-section="help"],
 .nav-item[data-section="support"] { display: none !important; }
 .me-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 8px 8px 0; }
@@ -839,8 +837,6 @@ input:focus, select:focus, textarea:focus {
     }
 
     .mobile-overlay.open { display: block; }
-
-    .nav-item[data-section="ai-assistant"] { display: none !important; }
 
     .phone-logout {
         display: inline-flex !important;
