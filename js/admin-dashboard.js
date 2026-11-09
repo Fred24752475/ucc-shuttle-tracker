@@ -741,20 +741,10 @@ let autoRefreshInterval = null;
 
 function initializeTrackingMap() {
     const mapContainer = document.getElementById('trackingMap');
-    if (!mapContainer) return;
-    
-    // Simple map implementation
-    mapContainer.innerHTML = `
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; position: relative;">
-            <div style="text-align: center;">
-                <div style="font-size: 48px; margin-bottom: 20px;">🗺️</div>
-                <div>Live Driver Tracking Map</div>
-                <div style="font-size: 14px; margin-top: 10px; opacity: 0.8;">University of Cape Coast Campus</div>
-            </div>
-            <div id="driverPins" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
-        </div>
-    `;
-    
+    if (!mapContainer || !window.CampusLiveMap) return;
+    mapContainer.style.height = 'min(72vh, 640px)';
+    mapContainer.style.minHeight = '420px';
+    window.CampusLiveMap.attach('trackingMap');
     loadDriverLocations();
     startAutoRefresh();
 }
@@ -762,29 +752,28 @@ function initializeTrackingMap() {
 async function loadDriverLocations() {
     const token = localStorage.getItem('ucc_token');
     if (!token) return;
-    
     try {
-        const response = await fetch('/api/admin/driver-locations', {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const response = await fetch('/api/shuttles/active', {
+            headers: { Authorization: 'Bearer ' + token }
         });
-        
         const data = await response.json();
-        if (data.success) {
-            updateDriverPins(data.drivers);
-            updateDriverStats(data.drivers);
-            updateDriversList(data.drivers);
-        }
+        const buses = (data.shuttles || []).map((bus) => ({
+            id: bus.id,
+            name: bus.driver_name || bus.driverName || 'Driver',
+            shuttle: bus.vehicle_number || bus.vehicleNumber || 'Shuttle',
+            status: 'online',
+            speed: 25,
+            lastUpdate: new Date()
+        }));
+        const online = document.getElementById('onlineDrivers');
+        const trips = document.getElementById('activeTrips');
+        if (online) online.textContent = buses.length;
+        if (trips) trips.textContent = buses.length;
+        updateDriversList(buses);
+        if (window.CampusLiveMap) window.CampusLiveMap.refresh();
     } catch (error) {
-        console.error('Error loading driver locations:', error);
-        // Show mock data for demo
-        const mockDrivers = [
-            {id: 1, name: 'John Driver', shuttle: 'UCC-001', status: 'online', lat: 30, lng: 40, speed: 25, lastUpdate: new Date()},
-            {id: 2, name: 'Jane Driver', shuttle: 'UCC-002', status: 'online', lat: 60, lng: 70, speed: 0, lastUpdate: new Date()},
-            {id: 3, name: 'Bob Driver', shuttle: 'UCC-003', status: 'offline', lat: 0, lng: 0, speed: 0, lastUpdate: new Date()}
-        ];
-        updateDriverPins(mockDrivers);
-        updateDriverStats(mockDrivers);
-        updateDriversList(mockDrivers);
+        const box = document.getElementById('driversStatus');
+        if (box) box.textContent = 'Could not load the moving shuttles.';
     }
 }
 

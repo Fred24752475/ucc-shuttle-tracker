@@ -1829,6 +1829,9 @@ async function completeStudentRide(id) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.CampusLiveMap && document.getElementById('driverHomeMap')) {
+        window.CampusLiveMap.attach('driverHomeMap');
+    }
     loadStudentRides();
     setInterval(loadStudentRides, 8000);
     if (typeof io === 'function') {

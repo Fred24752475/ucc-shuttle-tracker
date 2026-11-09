@@ -1456,8 +1456,9 @@ input:checked + .slider:before {
         padding: 1rem;
     }
     
-    #driverMap {
-        height: calc(100vh - 140px) !important;
+    #driverMap, #driverHomeMap {
+        height: calc(100vh - 180px) !important;
+        min-height: 320px !important;
         border-radius: 12px;
     }
     

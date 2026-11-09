@@ -155,7 +155,7 @@
         ensureStyle();
         if (el.querySelector('.simple-map-placeholder')) el.innerHTML = '';
         const compact = window.matchMedia('(max-width: 900px)').matches;
-        const fullPage = el.id === 'studentShuttleMap' || el.id === 'driverMap';
+        const fullPage = el.id === 'studentShuttleMap' || el.id === 'driverMap' || el.id === 'trackingMap' || el.id === 'driverHomeMap';
         const mapHeight = !compact ? 'min(68vh, 520px)' : (fullPage ? 'calc(100vh - 150px)' : '200px');
         el.style.setProperty('width', '100%', 'important');
         el.style.setProperty('height', mapHeight, 'important');
