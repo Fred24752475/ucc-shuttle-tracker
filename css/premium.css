@@ -704,7 +704,31 @@ input:focus, select:focus, textarea:focus {
     .ticket-cancel { margin-left: 0; }
 }
 
-.phone-menu, .phone-logout { display: none; }
+.phone-menu, .phone-logout, .menu-reopen { display: none; }
+.menu-reopen {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 95;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid var(--line);
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+}
+.menu-reopen span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: #101828;
+}
 
 #aiAssistantSection { background: #efeae2; padding: 0 !important; }
 #aiAssistantSection .section-header,
@@ -1145,7 +1169,8 @@ input:focus, select:focus, textarea:focus {
     aside#sidebar.sidebar.collapsed ~ .main-content {
         margin-left: 0 !important;
     }
-    .sidebar.collapsed ~ .main-content .phone-menu {
+    .sidebar.collapsed ~ .main-content .phone-menu,
+    .sidebar.collapsed ~ .menu-reopen {
         display: inline-flex !important;
     }
     main.profile-section {

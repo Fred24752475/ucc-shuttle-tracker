@@ -1256,7 +1256,18 @@ function handleLogout() {
 }
 
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('active');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    if (!sidebar) return;
+    if (window.matchMedia('(max-width: 900px)').matches) {
+        const open = sidebar.classList.toggle('open');
+        sidebar.classList.remove('collapsed');
+        if (overlay) overlay.classList.toggle('open', open);
+    } else {
+        sidebar.classList.toggle('collapsed');
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    }
 }
 
 

@@ -128,6 +128,7 @@
             </button>
         </div>
     </aside>
+    <button class="menu-reopen" type="button" aria-label="Show menu" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
 
     <!-- Main Content Area -->
     <div class="main-content">
@@ -135,7 +136,7 @@
         <header class="top-header">
             <div class="header-content">
                 <div class="welcome-message">
-                    <button class="phone-menu" type="button" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobileOverlay').classList.toggle('open')"><span></span><span></span><span></span></button>
+                    <button class="phone-menu" type="button" aria-label="Open menu" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
                     <h1 data-translate="welcome-back">Welcome back, <span id="studentName">Student</span></h1>
                     <p>Your personal shuttle tracking dashboard</p>
                 </div>
@@ -500,7 +501,7 @@
             <div class="messages-content">
                 <div class="chat-layout">
                     <div class="chat-directory" id="chatDirectory">
-                        <div class="wa-appbar"><button class="phone-menu" type="button" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mobileOverlay').classList.toggle('open')"><span></span><span></span><span></span></button>Messages</div>
+                        <div class="wa-appbar"><button class="phone-menu" type="button" aria-label="Open menu" onclick="toggleSidebar()"><span></span><span></span><span></span></button>Messages</div>
                         <div class="chat-tabs">
                             <button class="chat-tab-btn active" data-tab="chats" type="button">Chats</button>
                             <button class="chat-tab-btn" data-tab="requests" type="button">Requests <span class="notification-badge" id="friendRequestBadge" style="display: none;">0</span></button>
