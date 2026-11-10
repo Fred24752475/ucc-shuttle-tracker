@@ -125,6 +125,8 @@ const io = socketIo(server, {
         )`);
         console.log('Database connected');
         startDemoFleet();
+        await refreshDemoDriverNames();
+        setInterval(() => { refreshDemoDriverNames().catch(() => {}); }, 30000);
         console.log('Campus buses running:', demoFleet.size);
     } catch (error) {
         console.error('Database initialization failed:', error.message);
@@ -1306,7 +1308,6 @@ const DEMO_FLEET = [
     {
         id: 'demo-west',
         vehicle: 'UCC-BRT 01',
-        driver: 'Kofi Mensah',
         routeName: 'West Gate – Administration',
         loopMs: 140000,
         route: CAMPUS_LOOP
@@ -1314,7 +1315,6 @@ const DEMO_FLEET = [
     {
         id: 'demo-east',
         vehicle: 'UCC-BRT 02',
-        driver: 'Ama Boateng',
         routeName: 'East Gate – Halls',
         loopMs: 170000,
         route: [
@@ -1332,7 +1332,6 @@ const DEMO_FLEET = [
     {
         id: 'demo-science',
         vehicle: 'UCC-BRT 03',
-        driver: 'Yaw Owusu',
         routeName: 'Science – Hospital',
         loopMs: 125000,
         route: [
@@ -1437,6 +1436,16 @@ function beginCampusDrive(driverId, shuttle, driverName) {
     return state;
 }
 
+async function refreshDemoDriverNames() {
+    const result = await pool.query(`SELECT name FROM users WHERE role = 'driver' AND coalesce(name, '') <> '' ORDER BY id`);
+    const names = result.rows.map((row) => row.name);
+    DEMO_FLEET.forEach((bus, index) => {
+        const current = demoFleet.get(bus.id);
+        if (!current) return;
+        demoFleet.set(bus.id, { ...current, driverName: names.length ? names[index % names.length] : 'Unassigned' });
+    });
+}
+
 function startDemoFleet() {
     DEMO_FLEET.forEach((bus, index) => {
         if (demoFleet.has(bus.id)) return;
@@ -1445,7 +1454,7 @@ function startDemoFleet() {
         const state = {
             shuttleId: bus.id,
             vehicleNumber: bus.vehicle,
-            driverName: bus.driver,
+            driverName: 'Unassigned',
             routeName: bus.routeName,
             route: bus.route,
             loopMs: bus.loopMs,
@@ -1465,7 +1474,7 @@ function startDemoFleet() {
             io.emit('shuttle_location_update', {
                 shuttleId: bus.id,
                 vehicleNumber: bus.vehicle,
-                driverName: bus.driver,
+                driverName: current.driverName,
                 latitude,
                 longitude,
                 routeName: bus.routeName,
@@ -1641,6 +1650,7 @@ app.post('/api/driver/stop-ride', authenticateToken, requireRole(['driver']), as
 app.get('/api/shuttles/active', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
+        await refreshDemoDriverNames();
         const result = await client.query(`
             SELECT s.id, s.vehicle_number, s.current_latitude, s.current_longitude, 
                    s.status, u.name as driver_name, u.id as driver_id
